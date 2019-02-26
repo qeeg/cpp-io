@@ -1,6 +1,6 @@
 # A proposal to add std::byte-based IO to the C++
 
-## Header <io> synopsis
+## Header `<io>` synopsis
 
 	namespace std::io
 	{
