@@ -111,7 +111,7 @@
 	namespace customization_points
 	{
 
-	void read(input_stream& s, byte var);
+	void read(input_stream& s, byte& var);
 	void read(input_stream& s, Integral auto& var);
 	template <typename T>
 		requires is_floating_point_v<T>
@@ -148,7 +148,7 @@
 		requires is_floating_point_v<T>
 	void write(output_stream& s, T var);
 	template <size_t Extent>
-	void write(output_stream& s, span<const byte> buffer);
+	void write(output_stream& s, span<const byte, Extent> buffer);
 	template <size_t Extent>
 	void write(output_stream& s, span<const char8_t, Extent> buffer);
 	template <size_t Extent>
