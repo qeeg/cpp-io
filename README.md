@@ -2,22 +2,22 @@
 
 ## Header <io> synopsis
 
-namespace std::io
-{
+	namespace std::io
+	{
+	
+	enum class floating_point_format;
+	enum class bom_handling;
 
-enum class floating_point_format;
-enum class bom_handling;
+	class format;
+	class stream_base;
+	class input_stream;
+	class output_stream;
+	class stream;
 
-class format;
-class stream_base;
-class input_stream;
-class output_stream;
-class stream;
+	inline unspecified read;
+	inline unspecified write;
 
-inline unspecified read;
-inline unspecified write;
-
-}
+	}
 
 ## Type `floating_point_format`
 
