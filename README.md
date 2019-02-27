@@ -235,23 +235,23 @@ TODO
 
 ## Concept `CustomlyReadable`
 
-template <typename T>
-concept CustomlyReadable =
-	requires(T object, input_stream& stream)
-	{
-		object.read(stream);
-	};
+	template <typename T>
+	concept CustomlyReadable =
+		requires(T object, input_stream& stream)
+		{
+			object.read(stream);
+		};
 
 TODO
 
 ## Concept `CustomlyWritable`
 
-template <typename T>
-concept CustomlyWritable =
-	requires(const T object, output_stream& stream)
-	{
-		object.write(stream);
-	};
+	template <typename T>
+	concept CustomlyWritable =
+		requires(const T object, output_stream& stream)
+		{
+			object.write(stream);
+		};
 
 TODO
 
