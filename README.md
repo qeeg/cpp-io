@@ -51,6 +51,12 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * Provide intuitive customization points.
 * Support different endiannesses and floating point formats.
 
+## Future work
+
+It is hopeful that this proposal will be used as a basis for a modern Unicode-aware text streams because text is still bytes under the hood. However, this requires solving a lot of other difficult problems. Once modern text streams are finished, it is hopeful that legacy text streams will be deprecated and eventually removed.
+
+This proposal doesn't rule out more low-level library that exposes complex details of modern operating systems. However, the design of this library has been intentionally kept as simple as possible to be novice-friendly.
+
 ## Header `<io>` synopsis
 
 	namespace std::io
