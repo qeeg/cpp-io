@@ -15,7 +15,12 @@ Note: early draft.
 	class input_stream;
 	class output_stream;
 	class stream;
-
+	
+	template <typename T>
+	concept CustomlyReadable = see below;
+	template <typename T>
+	concept CustomlyWritable = see below;
+	
 	inline unspecified read;
 	inline unspecified write;
 	
@@ -228,6 +233,28 @@ TODO
 		stream(format f = {});
 	};
 
+## Concept `CustomlyReadable`
+
+template <typename T>
+concept CustomlyReadable =
+	requires(T object, input_stream& stream)
+	{
+		object.read(stream);
+	};
+
+TODO
+
+## Concept `CustomlyWritable`
+
+template <typename T>
+concept CustomlyWritable =
+	requires(const T object, output_stream& stream)
+	{
+		object.write(stream);
+	};
+
+TODO
+
 ## Customization points
 ### `io::read`
 
@@ -260,6 +287,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
       * Temporary sets the stream endianness to the endianness of read BOM.
       * For every element `C` in the given span performs `io::read(s, C)`.
       * Reverts stream endianness to the original value.
+* If `T` is `CustomlyReadable`, calls `E.read(s)`.
 
 Example implementation:
 
@@ -279,6 +307,7 @@ Example implementation:
 	void read(input_stream& s, span<char16_t, Extent> buffer);
 	template <size_t Extent>
 	void read(input_stream& s, span<char32_t, Extent> buffer);
+	void read(input_stream& s, CustomlyReadable auto& var);
 	
 	struct read_customization_point
 	{
@@ -309,6 +338,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is a span of `char32_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
   * If stream BOM handling is `read_write`, writes UTF-32 BOM in the stream endianness to the stream and for every element `C` in the given span performs `io::write(s, C)`.
+* If `T` is `CustomlyWritable`, calls `E.write(s)`.
 
 Example implementation:
 
@@ -330,6 +360,7 @@ Example implementation:
 	void write(output_stream& s, span<const char16_t, Extent> buffer);
 	template <size_t Extent>
 	void write(output_stream& s, span<const char32_t, Extent> buffer);
+	void write(output_stream& s, CustomlyWritable const auto& var);
 
 	struct write_customization_point
 	{
