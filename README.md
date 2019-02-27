@@ -25,7 +25,7 @@ This proposal is based on [ftz Serialization](https://gitlab.com/ftz/serializati
 * There is no way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
 * There is no easy way to convert floating point number from native represenation to ISO/IEC/IEEE 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms.
 
-While the author thinks that having endianness and floating point convertion functions available publicly. They leave them as implementation details in this paper.
+While the author thinks that having endianness and floating point convertion functions available publicly is a good idea, they leave them as implementation details in this paper.
 
 Thoughts on [Boost.Serialization](https://www.boost.org/doc/libs/1_69_0/libs/serialization/doc/index.html):
 
@@ -43,6 +43,13 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * Undefined behavior when detecting native endianness due to strict aliasing violation.
 * Doesn't support portable serialization of floating point values, but gives helpful `static_assert` in case of non-IEC platform.
 * Still uses standard text streams as archives.
+
+## Design goals
+
+* Always use `std::byte` instead of `char` when meaning raw bytes.
+* Do not do any text processing or hold any text-related data inside stream classes, even as template parameters.
+* Provide intuitive customization points.
+* Support different endiannesses and floating point formats.
 
 ## Header `<io>` synopsis
 
@@ -660,6 +667,7 @@ TODO
 ## Open issues
 
 * Concepts vs inheritance
+* `format` as part of the stream class or as separate argument to `io::read` and `io::write`.
 * `std::span` vs `std::ContiguousRange`
 * Dependency on `std::ios_base`.
 * Error handling
