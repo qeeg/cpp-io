@@ -165,17 +165,20 @@ TODO
 	virtual void set_read_position(streamsize position) = 0;
 
 *Effects:* Sets the read position of the stream to the given value.
+
 *Throws:* TODO
 
 	virtual void seek_read_position(streamoff offset, ios_base::seekdir direction)
 		= 0;
 
 *Effects:* TODO
+
 *Throws:* TODO
 
 	virtual void read(span<byte> buffer) = 0;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the read position by that amount.
+
 *Throws:* TODO
 
 
@@ -201,17 +204,20 @@ TODO
 	virtual void set_write_position(streamsize position) = 0;
 
 *Effects:* Sets the write position of the stream to the given value.
+
 *Throws:* TODO
 
 	virtual void seek_write_position(streamoff offset, ios_base::seekdir direction)
 		= 0;
 
 *Effects:* TODO
+
 *Throws:* TODO
 
 	virtual void write(span<const byte> buffer) = 0;
 
 *Effects:* Writes `size(buffer)` bytes to the stream and advances the write position by that amount.
+
 *Throws:* TODO
 
 ## Class `stream`
