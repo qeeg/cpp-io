@@ -108,6 +108,18 @@
 ## Customization points
 ### `io::read`
 
+The name `read` denotes a customization point object. The expression `io::read(s, E)` for some subexpression `s` of type `input_stream` and subexpression `E` with type `T` has the following effects:
+
+* If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
+* If `T` is `Integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
+* If `T` is `FloatingPoint`, reads `sizeof(T)` bytes from the stream, TODO
+* If `T` is a span of bytes, reads `std::size(E)` bytes from the stream and assigns them to `E`.
+* If `T` is a span of `char8_t`, TODO
+* If `T` is a span of `char16_t`, TODO
+* If `T` is a span of `char32_t`, TODO
+
+Example implementation:
+
 	namespace customization_points
 	{
 
@@ -136,6 +148,18 @@
 	inline customization_points::read_customization_point read;
 
 ### `io::write`
+
+The name `write` denotes a customization point object. The expression `io::write(s, E)` for some subexpression `s` of type `output_stream` and subexpression `E` with type `T` has the following effects:
+
+* If `T` is `byte`, writes it to the stream.
+* If `T` is `Integral`, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
+* If `T` is `FloatingPoint`, TODO
+* If `T` is a span of bytes, writes `std::size(E)` bytes to the stream.
+* If `T` is a span of `char8_t`, TODO
+* If `T` is a span of `char16_t`, TODO
+* If `T` is a span of `char32_t`, TODO
+
+Example implementation:
 
 	namespace customization_points
 	{
@@ -169,5 +193,6 @@
 ## Open issues
 
 * Concepts vs inheritance
+* `std::span` vs `std::ContiguousRange`
 * Dependency on `std::ios_base`.
 * Error handling
