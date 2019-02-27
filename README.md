@@ -518,7 +518,7 @@ TODO
 	class input_file_stream final : public input_stream
 	{
 	public:
-		input_file_stream(const std::filesystem::path& file_name, format f = {});
+		input_file_stream(const filesystem::path& file_name, format f = {});
 		bool is_good() const override;
 		bool is_eof() const override;
 		bool is_fail() const override;
@@ -540,7 +540,7 @@ TODO
 	class output_file_stream final : public output_stream
 	{
 	public:
-		output_file_stream(const std::filesystem::path& file_name, format f = {});
+		output_file_stream(const filesystem::path& file_name, format f = {});
 		bool is_good() const override;
 		bool is_eof() const override;
 		bool is_fail() const override;
@@ -562,7 +562,7 @@ TODO
 	class file_stream final : public stream
 	{
 	public:
-		file_stream(const std::filesystem::path& file_name, format f = {});
+		file_stream(const filesystem::path& file_name, format f = {});
 		bool is_good() const override;
 		bool is_eof() const override;
 		bool is_fail() const override;
@@ -590,3 +590,4 @@ TODO
 * `std::span` vs `std::ContiguousRange`
 * Dependency on `std::ios_base`.
 * Error handling
+* `filesystem::path_view`
