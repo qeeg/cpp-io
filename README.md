@@ -343,37 +343,244 @@ Example implementation:
 
 ## Class `input_span_stream`
 
+	class input_span_stream final : public input_stream
+	{
+	public:
+		input_span_stream(format f = {});
+		input_span_stream(span<const byte> buffer, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_read_position() override;
+		void set_read_position(streamsize position) override;
+		void seek_read_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void read(span<byte> buffer) override;
+		span<const byte> get_buffer() const noexcept;
+		void set_buffer(span<const byte> new_buffer);
+	}
+
 TODO
 
 ## Class `output_span_stream`
+
+	class output_span_stream final : public output_stream
+	{
+	public:
+		output_span_stream(format f = {});
+		output_span_stream(span<byte> buffer, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_write_position() override;
+		void set_write_position(streamsize position) override;
+		void seek_write_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void write(span<const byte> buffer) override;
+		span<byte> get_buffer() const noexcept;
+		void set_buffer(span<byte> new_buffer);
+	}
 
 TODO
 
 ## Class `span_stream`
 
+	class span_stream final : public stream
+	{
+	public:
+		span_stream(format f = {});
+		span_stream(span<byte> buffer, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_read_position() override;
+		void set_read_position(streamsize position) override;
+		void seek_read_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		streamsize get_write_position() override;
+		void set_write_position(streamsize position) override;
+		void seek_write_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void read(span<byte> buffer) override;
+		void write(span<const byte> buffer) override;
+		span<byte> get_buffer() const noexcept;
+		void set_buffer(span<byte> new_buffer);
+	}
+
 TODO
 
 ## Class template `input_memory_stream`
+
+	template <Container = vector<byte>>
+	class input_memory_stream final : public input_stream
+	{
+	public:
+		input_memory_stream(format f = {});
+		input_memory_stream(Container c, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_read_position() override;
+		void set_read_position(streamsize position) override;
+		void seek_read_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void read(span<byte> buffer) override;
+		const Container& get_buffer() const noexcept &;
+		Container get_buffer() noexcept &&;
+		void set_buffer(const Container& new_buffer);
+		void set_buffer(Container&& new_buffer);
+		void reset_buffer();
+	}
 
 TODO
 
 ## Class template `output_memory_stream`
 
+	template <Container = vector<byte>>
+	class output_memory_stream final : public output_stream
+	{
+	public:
+		output_memory_stream(format f = {});
+		output_memory_stream(Container c, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_write_position() override;
+		void set_write_position(streamsize position) override;
+		void seek_write_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void write(span<const byte> buffer) override;
+		const Container& get_buffer() const noexcept &;
+		Container get_buffer() noexcept &&;
+		void set_buffer(const Container& new_buffer);
+		void set_buffer(Container&& new_buffer);
+		void reset_buffer();
+	}
+
 TODO
 
 ## Class template `memory_stream`
+
+	template <Container = vector<byte>>
+	class memory_stream final : public stream
+	{
+	public:
+		memory_stream(format f = {});
+		memory_stream(Container c, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_read_position() override;
+		void set_read_position(streamsize position) override;
+		void seek_read_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		streamsize get_write_position() override;
+		void set_write_position(streamsize position) override;
+		void seek_write_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void read(span<byte> buffer) override;
+		void write(span<const byte> buffer) override;
+		const Container& get_buffer() const noexcept &;
+		Container get_buffer() noexcept &&;
+		void set_buffer(const Container& new_buffer);
+		void set_buffer(Container&& new_buffer);
+		void reset_buffer();
+	}
 
 TODO
 
 ## Class `input_file_stream`
 
+	class input_file_stream final : public input_stream
+	{
+	public:
+		input_file_stream(const std::filesystem::path& file_name, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_read_position() override;
+		void set_read_position(streamsize position) override;
+		void seek_read_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void read(span<byte> buffer) override;
+	}
+
 TODO
 
 ## Class `output_file_stream`
 
+	class output_file_stream final : public output_stream
+	{
+	public:
+		output_file_stream(const std::filesystem::path& file_name, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_write_position() override;
+		void set_write_position(streamsize position) override;
+		void seek_write_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void write(span<const byte> buffer) override;
+	}
+
 TODO
 
 ## Class `file_stream`
+
+	class file_stream final : public stream
+	{
+	public:
+		file_stream(const std::filesystem::path& file_name, format f = {});
+		bool is_good() const override;
+		bool is_eof() const override;
+		bool is_fail() const override;
+		bool is_bad() const override;
+		ios_base::iostate get_state() const override;
+		void add_to_state(ios_base::iostate state) override;
+		void set_state(ios_base::iostate state) override;
+		streamsize get_read_position() override;
+		void set_read_position(streamsize position) override;
+		void seek_read_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		streamsize get_write_position() override;
+		void set_write_position(streamsize position) override;
+		void seek_write_position(streamoff offset, ios_base::seekdir direction)
+			override;
+		void read(span<byte> buffer) override;
+		void write(span<const byte> buffer) override;
+	}
 
 TODO
 
