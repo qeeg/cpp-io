@@ -112,11 +112,31 @@ The name `read` denotes a customization point object. The expression `io::read(s
 
 * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
 * If `T` is `Integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
-* If `T` is `FloatingPoint`, reads `sizeof(T)` bytes from the stream, TODO
+* If `T` is `FloatingPoint`, reads `sizeof(T)` bytes from the stream and:
+  * If stream floating point format is native, assigns the bytes to the object representation of `E`.
+  * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
 * If `T` is a span of bytes, reads `std::size(E)` bytes from the stream and assigns them to `E`.
-* If `T` is a span of `char8_t`, TODO
-* If `T` is a span of `char16_t`, TODO
-* If `T` is a span of `char32_t`, TODO
+* If `T` is a span of `char8_t` and:
+  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
+  * If stream BOM handling is `read_write`, reads 3 bytes from the stream and:
+    * If read bytes are not equal to UTF-8 BOM, the read position is reverted to the one before the read and an exception is thrown.
+    * Otherwise, for every element `C` in the given span performs `io::read(s, C)`.
+* If `T` is a span of `char16_t`and:
+  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
+  * If stream BOM handling is `read_write`, reads 2 bytes from the stream and:
+    * If read bytes are not equal to UTF-16 BOM, the read position is reverted to the one before the read an exception is thrown.
+    * If read bytes are equal to UTF-16 BOM:
+      * Temporary sets the stream endianness to the endianness of read BOM.
+      * For every element `C` in the given span performs `io::read(s, C)`.
+      * Reverts stream endianness to the original value.
+* If `T` is a span of `char32_t` and:
+  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
+  * If stream BOM handling is `read_write`, reads 4 bytes from the stream and:
+    * If read bytes are not equal to UTF-32 BOM, the read position is reverted to the one before the read an exception is thrown.
+    * If read bytes are equal to UTF-32 BOM:
+      * Temporary sets the stream endianness to the endianness of read BOM.
+      * For every element `C` in the given span performs `io::read(s, C)`.
+      * Reverts stream endianness to the original value.
 
 Example implementation:
 
@@ -153,11 +173,19 @@ The name `write` denotes a customization point object. The expression `io::write
 
 * If `T` is `byte`, writes it to the stream.
 * If `T` is `Integral`, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
-* If `T` is `FloatingPoint`, TODO
+* If `T` is `FloatingPoint` and:
+  * If stream floating point format is native, writes the object representation of `E` to the stream.
+  * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
 * If `T` is a span of bytes, writes `std::size(E)` bytes to the stream.
-* If `T` is a span of `char8_t`, TODO
-* If `T` is a span of `char16_t`, TODO
-* If `T` is a span of `char32_t`, TODO
+* If `T` is a span of `char8_t` and:
+  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
+  * If stream BOM handling is `read_write`, writes UTF-8 BOM to the stream and for every element `C` in the given span performs `io::write(s, C)`.
+* If `T` is a span of `char16_t` and:
+  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
+  * If stream BOM handling is `read_write`, writes UTF-16 BOM in the stream endianness to the stream and for every element `C` in the given span performs `io::write(s, C)`.
+* If `T` is a span of `char32_t` and:
+  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
+  * If stream BOM handling is `read_write`, writes UTF-32 BOM in the stream endianness to the stream and for every element `C` in the given span performs `io::write(s, C)`.
 
 Example implementation:
 
