@@ -2,6 +2,20 @@
 
 Note: early draft.
 
+## Motivation
+
+C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO but it has many drawbacks:
+
+* The API still works in terms of `char` which means `reinterpret_cast` if you use `std::byte` in your code base.
+* Streams operate in terms of `std::char_traits` which makes no sense when doing binary IO. In particular, `std::ios::pos_type` is a very painful type to work with but is required in many IO operations.
+* Stream open mode doesn't make a lot of sense and you'd always want to make sure to force it to have `std::ios_base::binary`.
+* Stream objects carry a lot of text formatting flags that are irrelevant when doing binary IO. This leads to wasted memory.
+* By default, stream operations don't throw exceptions. This usually means some wrapper code to force exceptions.
+* If you want to do IO in memory, you're stuck with string streams that operate using `std::basic_stream`. Most binary data is stored in `std::vector` which leads to awful performance due to unnecessary copies.
+* There is no agreed standard for customization points for binary IO.
+
+This proposal tries to fix all mentioned issues.
+
 ## Header `<io>` synopsis
 
 	namespace std::io
