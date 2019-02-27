@@ -16,6 +16,34 @@ C++ has text streams for a long time. However, there is no comfortable way to re
 
 This proposal tries to fix all mentioned issues.
 
+## Prior art
+
+This proposal is based on [ftz Serialization](https://gitlab.com/ftz/serialization) library which was initially written in 2010 targeting C++98 and was gradually updated to C++20. In particular, the following problems were encountered:
+
+* There was no portable way to determine the native endianness, especially since sizes of all fundamental types can be 1 and all fixed-width types are optional.
+* There was no easy way to convert integers from native representation to two's complement and vice versa. This was fixed by requiring all integers to be two's complement in C++20.
+* There is no way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
+* There is no easy way to convert floating point number from native represenation to ISO/IEC/IEEE 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms.
+
+While the author thinks that having endianness and floating point convertion functions available publicly. They leave them as implementation details in this paper.
+
+Thoughts on [Boost.Serialization](https://www.boost.org/doc/libs/1_69_0/libs/serialization/doc/index.html):
+
+* It uses confusing operator overloading akin to standard text streams which leads to several problems such as unnecessary complexity of `>>` and `<<` returning a reference to the archive.
+* It doesn't support portable serialization of floating point values.
+* It tries to do too much by adding version number to customization points, performing magic on pointers, arrays, several standard containers and general purpose boost classes.
+* Unfortunate macro to split `load` and `save` customization points.
+* It still uses standard text streams as archives.
+
+Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
+
+* It decided to inherit several Boost problems for the sake of compatibility.
+* Strange `operator()` syntax for IO.
+* Will not compile if `CHAR_BIT > 8`.
+* Undefined behavior when detecting native endianness due to strict aliasing violation.
+* Doesn't support portable serialization of floating point values, but gives helpful `static_assert` in case of non-IEC platform.
+* Still uses standard text streams as archives.
+
 ## Header `<io>` synopsis
 
 	namespace std::io
