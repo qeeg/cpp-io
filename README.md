@@ -324,7 +324,7 @@ Example implementation:
 The name `write` denotes a customization point object. The expression `io::write(s, E)` for some subexpression `s` of type `output_stream` and subexpression `E` with type `T` has the following effects:
 
 * If `T` is `byte`, writes it to the stream.
-* If `T` is `Integral`, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
+* If `T` is `Integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
 * If `T` is `FloatingPoint` and:
   * If stream floating point format is native, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
