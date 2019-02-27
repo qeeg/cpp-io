@@ -1,5 +1,7 @@
 # A proposal to add std::byte-based IO to the C++
 
+Note: early draft.
+
 ## Header `<io>` synopsis
 
 	namespace std::io
@@ -16,7 +18,22 @@
 
 	inline unspecified read;
 	inline unspecified write;
-
+	
+	class input_span_stream;
+	class output_span_stream;
+	class span_stream;
+	
+	template <Container = vector<byte>>
+	class input_memory_stream;
+	template <Container = vector<byte>>
+	class output_memory_stream;
+	template <Container = vector<byte>>
+	class memory_stream;
+	
+	class input_file_stream;
+	class output_file_stream;
+	class file_stream;
+	
 	}
 
 ## Type `floating_point_format`
@@ -27,6 +44,8 @@
 		native
 	};
 
+TODO
+
 ## Type `bom_handling`
 
 	enum class bom_handling
@@ -34,6 +53,8 @@
 		none,
 		read_write
 	};
+
+TODO
 
 ## Class `format`
 
@@ -50,12 +71,50 @@
 			noexcept;
 		constexpr bom_handling get_bom_handling() const noexcept;
 		constexpr void set_bom_handling(bom_handling new_handling) noexcept;
+	private:
+		endian endianness_; // exposition only
+		floating_point_format float_format_; // exposition only
+		bom_handling bom_handling_; // exposition only
 	};
+
+TODO
+
+	constexpr format(endian endianness = endian::native,
+		floating_point_format float_format = floating_point_format::native,
+		bom_handling bh = bom_handling::none);
+
+*Ensures:* `endianness_ == endianness`, `float_format_ == float_format` and `bom_handling_ == bh`.
+
+	constexpr endian get_endianness() const noexcept;
+
+*Returns:* `enidianness_`.
+
+	constexpr void set_endianness(endian new_endianness) noexcept;
+
+*Ensures:* `endianness_ == new_endianness`.
+
+	constexpr floating_point_format get_floating_point_format() const noexcept;
+
+*Returns:* `float_format_`.
+
+	constexpr void set_floating_point_format(floating_point_format new_format)
+		noexcept;
+
+*Ensures:* `float_format_ == new_format`.
+
+	constexpr bom_handling get_bom_handling() const noexcept;
+
+*Returns:* `bom_handling_`.
+
+	constexpr void set_bom_handling(bom_handling new_handling) noexcept;
+
+*Ensures:* `bom_handling_ == new_handling`.
 
 ## Class `stream_base`
 
 	class stream_base
 	{
+	public:
 		stream_base(format f = {});
 		virtual ~stream_base() = default;
 		format& get_format() noexcept;
@@ -69,7 +128,20 @@
 		virtual void add_to_state(ios_base::iostate state) = 0;
 		virtual void set_state(ios_base::iostate state) = 0;
 		void clear_state();
+	private:
+		format format_; // exposition only
 	};
+
+TODO
+
+	stream_base(format f = {});
+
+*Ensures:* `format_ == f`.
+
+	format& get_format() noexcept;
+	const format& get_format() const noexcept;
+
+*Returns:* `format_`.
 
 ## Class `input_stream`
 
@@ -84,6 +156,29 @@
 		virtual void read(span<byte> buffer) = 0;
 	};
 
+TODO
+
+	virtual streamsize get_read_position() = 0;
+
+*Returns:* Current read position of the stream.
+
+	virtual void set_read_position(streamsize position) = 0;
+
+*Effects:* Sets the read position of the stream to the given value.
+*Throws:* TODO
+
+	virtual void seek_read_position(streamoff offset, ios_base::seekdir direction)
+		= 0;
+
+*Effects:* TODO
+*Throws:* TODO
+
+	virtual void read(span<byte> buffer) = 0;
+
+*Effects:* Reads `size(buffer)` bytes from the stream and advances the read position by that amount.
+*Throws:* TODO
+
+
 ## Class `output_stream`
 
 	class output_stream : public virtual stream_base
@@ -96,6 +191,28 @@
 			ios_base::seekdir direction) = 0;
 		virtual void write(span<const byte> buffer) = 0;
 	};
+
+TODO
+
+	virtual streamsize get_write_position() = 0;
+
+*Returns:* Current write position of the stream.
+
+	virtual void set_write_position(streamsize position) = 0;
+
+*Effects:* Sets the write position of the stream to the given value.
+*Throws:* TODO
+
+	virtual void seek_write_position(streamoff offset, ios_base::seekdir direction)
+		= 0;
+
+*Effects:* TODO
+*Throws:* TODO
+
+	virtual void write(span<const byte> buffer) = 0;
+
+*Effects:* Writes `size(buffer)` bytes to the stream and advances the write position by that amount.
+*Throws:* TODO
 
 ## Class `stream`
 
@@ -115,7 +232,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
 * If `T` is `FloatingPoint`, reads `sizeof(T)` bytes from the stream and:
   * If stream floating point format is native, assigns the bytes to the object representation of `E`.
   * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
-* If `T` is a span of bytes, reads `std::size(E)` bytes from the stream and assigns them to `E`.
+* If `T` is a span of bytes, reads `size(E)` bytes from the stream and assigns them to `E`.
 * If `T` is a span of `char8_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
   * If stream BOM handling is `read_write`, reads 3 bytes from the stream and:
@@ -176,7 +293,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is `FloatingPoint` and:
   * If stream floating point format is native, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
-* If `T` is a span of bytes, writes `std::size(E)` bytes to the stream.
+* If `T` is a span of bytes, writes `size(E)` bytes to the stream.
 * If `T` is a span of `char8_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
   * If stream BOM handling is `read_write`, writes UTF-8 BOM to the stream and for every element `C` in the given span performs `io::write(s, C)`.
@@ -217,6 +334,42 @@ Example implementation:
 	}
 
 	inline customization_points::write_customization_point write;
+
+## Class `input_span_stream`
+
+TODO
+
+## Class `output_span_stream`
+
+TODO
+
+## Class `span_stream`
+
+TODO
+
+## Class template `input_memory_stream`
+
+TODO
+
+## Class template `output_memory_stream`
+
+TODO
+
+## Class template `memory_stream`
+
+TODO
+
+## Class `input_file_stream`
+
+TODO
+
+## Class `output_file_stream`
+
+TODO
+
+## Class `file_stream`
+
+TODO
 
 ## Open issues
 
