@@ -1,4 +1,4 @@
-# A proposal to add std::byte-based IO to the C++
+# A proposal to add std::byte-based IO to C++
 
 Note: early draft.
 
@@ -175,10 +175,10 @@ TODO
 	class stream_base
 	{
 	public:
-		stream_base(format f = {});
+		constexpr stream_base(format f = {});
 		virtual ~stream_base() = default;
-		format& get_format() noexcept;
-		const format& get_format() const noexcept;
+		constexpr format get_format() const noexcept;
+		constexpr void set_format(format f) noexcept;
 		virtual bool is_good() const = 0;
 		virtual bool is_eof() const = 0;
 		virtual bool is_fail() const = 0;
@@ -188,20 +188,39 @@ TODO
 		virtual void add_to_state(ios_base::iostate state) = 0;
 		virtual void set_state(ios_base::iostate state) = 0;
 		void clear_state();
+		virtual streamsize get_position() = 0;
+		virtual void set_position(streamsize position) = 0;
+		virtual void seek_position(streamoff offset, ios_base::seekdir direction)
+			= 0;
 	private:
 		format format_; // exposition only
 	};
 
 TODO
 
-	stream_base(format f = {});
+	constexpr stream_base(format f = {});
 
 *Ensures:* `format_ == f`.
 
-	format& get_format() noexcept;
-	const format& get_format() const noexcept;
+	constexpr format& get_format() noexcept;
 
 *Returns:* `format_`.
+
+	virtual streamsize get_position() = 0;
+
+*Returns:* Current position of the stream.
+
+	virtual void set_position(streamsize position) = 0;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* TODO
+
+	virtual void seek_position(streamoff offset, ios_base::seekdir direction) = 0;
+
+*Effects:* TODO
+
+*Throws:* TODO
 
 ## Class `input_stream`
 
@@ -209,38 +228,16 @@ TODO
 	{
 	public:
 		input_stream(format f = {});
-		virtual streamsize get_read_position() = 0;
-		virtual void set_read_position(streamsize position) = 0;
-		virtual void seek_read_position(streamoff offset,
-			ios_base::seekdir direction) = 0;
 		virtual void read(span<byte> buffer) = 0;
 	};
 
 TODO
 
-	virtual streamsize get_read_position() = 0;
-
-*Returns:* Current read position of the stream.
-
-	virtual void set_read_position(streamsize position) = 0;
-
-*Effects:* Sets the read position of the stream to the given value.
-
-*Throws:* TODO
-
-	virtual void seek_read_position(streamoff offset, ios_base::seekdir direction)
-		= 0;
-
-*Effects:* TODO
-
-*Throws:* TODO
-
 	virtual void read(span<byte> buffer) = 0;
 
-*Effects:* Reads `size(buffer)` bytes from the stream and advances the read position by that amount.
+*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
 
 *Throws:* TODO
-
 
 ## Class `output_stream`
 
@@ -248,35 +245,14 @@ TODO
 	{
 	public:
 		output_stream(format f = {});
-		virtual streamsize get_write_position() = 0;
-		virtual void set_write_position(streamsize position) = 0;
-		virtual void seek_write_position(streamoff offset,
-			ios_base::seekdir direction) = 0;
 		virtual void write(span<const byte> buffer) = 0;
 	};
 
 TODO
 
-	virtual streamsize get_write_position() = 0;
-
-*Returns:* Current write position of the stream.
-
-	virtual void set_write_position(streamsize position) = 0;
-
-*Effects:* Sets the write position of the stream to the given value.
-
-*Throws:* TODO
-
-	virtual void seek_write_position(streamoff offset, ios_base::seekdir direction)
-		= 0;
-
-*Effects:* TODO
-
-*Throws:* TODO
-
 	virtual void write(span<const byte> buffer) = 0;
 
-*Effects:* Writes `size(buffer)` bytes to the stream and advances the write position by that amount.
+*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
 
 *Throws:* TODO
 
@@ -324,12 +300,12 @@ The name `read` denotes a customization point object. The expression `io::read(s
 * If `T` is a span of `char8_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
   * If stream BOM handling is `read_write`, reads 3 bytes from the stream and:
-    * If read bytes are not equal to UTF-8 BOM, the read position is reverted to the one before the read and an exception is thrown.
+    * If read bytes are not equal to UTF-8 BOM, the position is reverted to the one before the read and an exception is thrown.
     * Otherwise, for every element `C` in the given span performs `io::read(s, C)`.
 * If `T` is a span of `char16_t`and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
   * If stream BOM handling is `read_write`, reads 2 bytes from the stream and:
-    * If read bytes are not equal to UTF-16 BOM, the read position is reverted to the one before the read an exception is thrown.
+    * If read bytes are not equal to UTF-16 BOM, the position is reverted to the one before the read an exception is thrown.
     * If read bytes are equal to UTF-16 BOM:
       * Temporary sets the stream endianness to the endianness of read BOM.
       * For every element `C` in the given span performs `io::read(s, C)`.
@@ -337,7 +313,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
 * If `T` is a span of `char32_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
   * If stream BOM handling is `read_write`, reads 4 bytes from the stream and:
-    * If read bytes are not equal to UTF-32 BOM, the read position is reverted to the one before the read an exception is thrown.
+    * If read bytes are not equal to UTF-32 BOM, the position is reverted to the one before the read an exception is thrown.
     * If read bytes are equal to UTF-32 BOM:
       * Temporary sets the stream endianness to the endianness of read BOM.
       * For every element `C` in the given span performs `io::read(s, C)`.
@@ -441,14 +417,13 @@ Example implementation:
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_read_position() override;
-		void set_read_position(streamsize position) override;
-		void seek_read_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
 		span<const byte> get_buffer() const noexcept;
 		void set_buffer(span<const byte> new_buffer);
-	}
+	};
 
 TODO
 
@@ -466,14 +441,13 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_write_position() override;
-		void set_write_position(streamsize position) override;
-		void seek_write_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void write(span<const byte> buffer) override;
 		span<byte> get_buffer() const noexcept;
 		void set_buffer(span<byte> new_buffer);
-	}
+	};
 
 TODO
 
@@ -491,19 +465,14 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_read_position() override;
-		void set_read_position(streamsize position) override;
-		void seek_read_position(streamoff offset, ios_base::seekdir direction)
-			override;
-		streamsize get_write_position() override;
-		void set_write_position(streamsize position) override;
-		void seek_write_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
 		void write(span<const byte> buffer) override;
 		span<byte> get_buffer() const noexcept;
 		void set_buffer(span<byte> new_buffer);
-	}
+	};
 
 TODO
 
@@ -522,17 +491,16 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_read_position() override;
-		void set_read_position(streamsize position) override;
-		void seek_read_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
 		const Container& get_buffer() const noexcept &;
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
 		void reset_buffer();
-	}
+	};
 
 TODO
 
@@ -551,17 +519,16 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_write_position() override;
-		void set_write_position(streamsize position) override;
-		void seek_write_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void write(span<const byte> buffer) override;
 		const Container& get_buffer() const noexcept &;
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
 		void reset_buffer();
-	}
+	};
 
 TODO
 
@@ -580,14 +547,9 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_read_position() override;
-		void set_read_position(streamsize position) override;
-		void seek_read_position(streamoff offset, ios_base::seekdir direction)
-			override;
-		streamsize get_write_position() override;
-		void set_write_position(streamsize position) override;
-		void seek_write_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
 		void write(span<const byte> buffer) override;
 		const Container& get_buffer() const noexcept &;
@@ -595,7 +557,7 @@ TODO
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
 		void reset_buffer();
-	}
+	};
 
 TODO
 
@@ -612,12 +574,11 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_read_position() override;
-		void set_read_position(streamsize position) override;
-		void seek_read_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
-	}
+	};
 
 TODO
 
@@ -634,12 +595,11 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_write_position() override;
-		void set_write_position(streamsize position) override;
-		void seek_write_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void write(span<const byte> buffer) override;
-	}
+	};
 
 TODO
 
@@ -656,17 +616,12 @@ TODO
 		ios_base::iostate get_state() const override;
 		void add_to_state(ios_base::iostate state) override;
 		void set_state(ios_base::iostate state) override;
-		streamsize get_read_position() override;
-		void set_read_position(streamsize position) override;
-		void seek_read_position(streamoff offset, ios_base::seekdir direction)
-			override;
-		streamsize get_write_position() override;
-		void set_write_position(streamsize position) override;
-		void seek_write_position(streamoff offset, ios_base::seekdir direction)
-			override;
+		streamsize get_position() override;
+		void set_position(streamsize position) override;
+		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
 		void write(span<const byte> buffer) override;
-	}
+	};
 
 TODO
 
