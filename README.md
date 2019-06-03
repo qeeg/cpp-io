@@ -410,7 +410,7 @@ Example implementation:
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void read(span<byte> buffer) override;
 		span<const byte> get_buffer() const noexcept;
-		void set_buffer(span<const byte> new_buffer);
+		void set_buffer(span<const byte> new_buffer) noexcept;
 	};
 
 TODO
@@ -427,7 +427,7 @@ TODO
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
 		void write(span<const byte> buffer) override;
 		span<byte> get_buffer() const noexcept;
-		void set_buffer(span<byte> new_buffer);
+		void set_buffer(span<byte> new_buffer) noexcept;
 	};
 
 TODO
@@ -445,7 +445,7 @@ TODO
 		void read(span<byte> buffer) override;
 		void write(span<const byte> buffer) override;
 		span<byte> get_buffer() const noexcept;
-		void set_buffer(span<byte> new_buffer);
+		void set_buffer(span<byte> new_buffer) noexcept;
 	};
 
 TODO
