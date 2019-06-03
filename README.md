@@ -83,12 +83,16 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	class output_span_stream;
 	class span_stream;
 	
-	template <Container = vector<byte>>
-	class input_memory_stream;
-	template <Container = vector<byte>>
-	class output_memory_stream;
-	template <Container = vector<byte>>
-	class memory_stream;
+	template <typename Container>
+	class basic_input_memory_stream;
+	template <typename Container>
+	class basic_output_memory_stream;
+	template <typename Container>
+	class basic_memory_stream;
+	
+	using input_memory_stream = basic_input_memory_stream<vector<byte>>;
+	using output_memory_stream = basic_output_memory_stream<vector<byte>>;
+	using memory_stream = basic_memory_stream<vector<byte>>;
 	
 	class input_file_stream;
 	class output_file_stream;
@@ -476,14 +480,14 @@ TODO
 
 TODO
 
-## Class template `input_memory_stream`
+## Class template `basic_input_memory_stream`
 
-	template <Container = vector<byte>>
-	class input_memory_stream final : public input_stream
+	template <typename Container>
+	class basic_input_memory_stream final : public input_stream
 	{
 	public:
-		input_memory_stream(format f = {});
-		input_memory_stream(Container c, format f = {});
+		basic_input_memory_stream(format f = {});
+		basic_input_memory_stream(Container c, format f = {});
 		bool is_good() const override;
 		bool is_eof() const override;
 		bool is_fail() const override;
@@ -504,14 +508,14 @@ TODO
 
 TODO
 
-## Class template `output_memory_stream`
+## Class template `basic_output_memory_stream`
 
-	template <Container = vector<byte>>
-	class output_memory_stream final : public output_stream
+	template <typename Container>
+	class basic_output_memory_stream final : public output_stream
 	{
 	public:
-		output_memory_stream(format f = {});
-		output_memory_stream(Container c, format f = {});
+		basic_output_memory_stream(format f = {});
+		basic_output_memory_stream(Container c, format f = {});
 		bool is_good() const override;
 		bool is_eof() const override;
 		bool is_fail() const override;
@@ -532,14 +536,14 @@ TODO
 
 TODO
 
-## Class template `memory_stream`
+## Class template `basic_memory_stream`
 
-	template <Container = vector<byte>>
-	class memory_stream final : public stream
+	template <typename Container>
+	class basic_memory_stream final : public stream
 	{
 	public:
-		memory_stream(format f = {});
-		memory_stream(Container c, format f = {});
+		basic_memory_stream(format f = {});
+		basic_memory_stream(Container c, format f = {});
 		bool is_good() const override;
 		bool is_eof() const override;
 		bool is_fail() const override;
