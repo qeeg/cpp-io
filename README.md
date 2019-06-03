@@ -183,15 +183,6 @@ TODO
 		virtual ~stream_base() = default;
 		constexpr format get_format() const noexcept;
 		constexpr void set_format(format f) noexcept;
-		virtual bool is_good() const = 0;
-		virtual bool is_eof() const = 0;
-		virtual bool is_fail() const = 0;
-		virtual bool is_bad() const = 0;
-		explicit operator bool() const;
-		virtual ios_base::iostate get_state() const = 0;
-		virtual void add_to_state(ios_base::iostate state) = 0;
-		virtual void set_state(ios_base::iostate state) = 0;
-		void clear_state();
 		virtual streamsize get_position() = 0;
 		virtual void set_position(streamsize position) = 0;
 		virtual void seek_position(streamoff offset, ios_base::seekdir direction)
@@ -414,13 +405,6 @@ Example implementation:
 	public:
 		input_span_stream(format f = {});
 		input_span_stream(span<const byte> buffer, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -438,13 +422,6 @@ TODO
 	public:
 		output_span_stream(format f = {});
 		output_span_stream(span<byte> buffer, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -462,13 +439,6 @@ TODO
 	public:
 		span_stream(format f = {});
 		span_stream(span<byte> buffer, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -488,13 +458,6 @@ TODO
 	public:
 		basic_input_memory_stream(format f = {});
 		basic_input_memory_stream(Container c, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -516,13 +479,6 @@ TODO
 	public:
 		basic_output_memory_stream(format f = {});
 		basic_output_memory_stream(Container c, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -544,13 +500,6 @@ TODO
 	public:
 		basic_memory_stream(format f = {});
 		basic_memory_stream(Container c, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -571,13 +520,6 @@ TODO
 	{
 	public:
 		input_file_stream(const filesystem::path& file_name, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -592,13 +534,6 @@ TODO
 	{
 	public:
 		output_file_stream(const filesystem::path& file_name, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -613,13 +548,6 @@ TODO
 	{
 	public:
 		file_stream(const filesystem::path& file_name, format f = {});
-		bool is_good() const override;
-		bool is_eof() const override;
-		bool is_fail() const override;
-		bool is_bad() const override;
-		ios_base::iostate get_state() const override;
-		void add_to_state(ios_base::iostate state) override;
-		void set_state(ios_base::iostate state) override;
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
