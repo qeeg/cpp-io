@@ -50,6 +50,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * Do not do any text processing or hold any text-related data inside stream classes, even as template parameters.
 * Provide intuitive customization points.
 * Support different endiannesses and floating point formats.
+* Design stream classes to efficiently map to OS API in case of file IO.
 
 ## Future work
 
