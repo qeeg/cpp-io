@@ -466,7 +466,7 @@ TODO
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
-		void reset_buffer();
+		void reset_buffer() noexcept;
 	};
 
 TODO
@@ -487,7 +487,7 @@ TODO
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
-		void reset_buffer();
+		void reset_buffer() noexcept;
 	};
 
 TODO
@@ -509,7 +509,7 @@ TODO
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
-		void reset_buffer();
+		void reset_buffer() noexcept;
 	};
 
 TODO
