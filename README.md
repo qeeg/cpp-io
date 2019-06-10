@@ -216,15 +216,21 @@ TODO
 
 TODO
 
-## Class `stream_base`
+## Stream base classes
+
+### Class `stream_base`
 
 	class stream_base
 	{
 	public:
 		constexpr stream_base(format f = {});
 		virtual ~stream_base() = default;
+		
+		// Format
 		constexpr format get_format() const noexcept;
 		constexpr void set_format(format f) noexcept;
+		
+		// Position
 		virtual streamsize get_position() = 0;
 		virtual void set_position(streamsize position) = 0;
 		virtual void seek_position(streamoff offset, ios_base::seekdir direction)
@@ -239,9 +245,17 @@ TODO
 
 *Ensures:* `format_ == f`.
 
-	constexpr format& get_format() noexcept;
+#### Format
+
+	constexpr format get_format() const noexcept;
 
 *Returns:* `format_`.
+
+	constexpr void set_format(format f) noexcept;
+
+*Ensures:* `format_ == f`.
+
+#### Position
 
 	virtual streamsize get_position() = 0;
 
@@ -269,16 +283,20 @@ TODO
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
 * `value_too_large` - if resulting position is greater than the maximum size supported by the stream.
 
-## Class `input_stream`
+### Class `input_stream`
 
 	class input_stream : public virtual stream_base
 	{
 	public:
 		input_stream(format f = {});
+		
+		// Reading
 		virtual void read(span<byte> buffer) = 0;
 	};
 
 TODO
+
+#### Reading
 
 	virtual void read(span<byte> buffer) = 0;
 
@@ -296,10 +314,14 @@ TODO
 	{
 	public:
 		output_stream(format f = {});
+		
+		// Writing
 		virtual void write(span<const byte> buffer) = 0;
 	};
 
 TODO
+
+#### Writing
 
 	virtual void write(span<const byte> buffer) = 0;
 
@@ -311,7 +333,7 @@ TODO
 * `file_too_large` - tried to write past the maximum size supported by the stream.
 * `physical_error` - if physical I/O error has occured.
 
-## Class `stream`
+### Class `stream`
 
 	class stream : public input_stream, public output_stream
 	{
@@ -458,17 +480,26 @@ Example implementation:
 
 	inline customization_points::write_customization_point write;
 
-## Class `input_span_stream`
+## Span streams
+
+### Class `input_span_stream`
 
 	class input_span_stream final : public input_stream
 	{
 	public:
+		// Constructors
 		input_span_stream(format f = {});
 		input_span_stream(span<const byte> buffer, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Reading
 		void read(span<byte> buffer) override;
+		
+		// Buffer management
 		span<const byte> get_buffer() const noexcept;
 		void set_buffer(span<const byte> new_buffer) noexcept;
 	private:
@@ -477,6 +508,8 @@ Example implementation:
 	};
 
 TODO
+
+#### Constructors
 
 	input_span_stream(format f = {});
 
@@ -495,7 +528,7 @@ TODO
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-<!-- -->
+#### Position
 
 	void set_position(streamsize position) override;
 
@@ -519,9 +552,9 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
-<!-- -->
+#### Reading
 
-	virtual void read(span<byte> buffer) = 0;
+	void read(span<byte> buffer) override;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -530,17 +563,24 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-## Class `output_span_stream`
+### Class `output_span_stream`
 
 	class output_span_stream final : public output_stream
 	{
 	public:
+		// Constructors
 		output_span_stream(format f = {});
 		output_span_stream(span<byte> buffer, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Writing
 		void write(span<const byte> buffer) override;
+		
+		// Buffer management
 		span<byte> get_buffer() const noexcept;
 		void set_buffer(span<byte> new_buffer) noexcept;
 	private:
@@ -549,6 +589,8 @@ TODO
 	};
 
 TODO
+
+#### Constructors
 
 	output_span_stream(format f = {});
 
@@ -567,7 +609,7 @@ TODO
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-<!-- -->
+#### Position
 
 	void set_position(streamsize position) override;
 
@@ -591,9 +633,9 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
-<!-- -->
+#### Writing
 
-	virtual void write(span<const byte> buffer) = 0;
+	void write(span<const byte> buffer) override;
 
 *Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -602,18 +644,27 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-## Class `span_stream`
+### Class `span_stream`
 
 	class span_stream final : public stream
 	{
 	public:
+		// Constructors
 		span_stream(format f = {});
 		span_stream(span<byte> buffer, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Reading
 		void read(span<byte> buffer) override;
+		
+		// Writing
 		void write(span<const byte> buffer) override;
+		
+		// Buffer management
 		span<byte> get_buffer() const noexcept;
 		void set_buffer(span<byte> new_buffer) noexcept;
 	private:
@@ -622,6 +673,8 @@ TODO
 	};
 
 TODO
+
+#### Constructors
 
 	span_stream(format f = {});
 
@@ -640,7 +693,7 @@ TODO
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-<!-- -->
+#### Position
 
 	void set_position(streamsize position) override;
 
@@ -664,9 +717,9 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
-<!-- -->
+#### Reading
 
-	virtual void read(span<byte> buffer) = 0;
+	void read(span<byte> buffer) override;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -675,9 +728,9 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-<!-- -->
+#### Writing
 
-	virtual void write(span<const byte> buffer) = 0;
+	void write(span<const byte> buffer) override;
 
 *Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -686,19 +739,28 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-## Class template `basic_input_memory_stream`
+## Memory streams
+
+### Class template `basic_input_memory_stream`
 
 	template <typename Container>
 	class basic_input_memory_stream final : public input_stream
 	{
 	public:
+		// Constructors
 		basic_input_memory_stream(format f = {});
 		basic_input_memory_stream(const Container& c, format f = {});
 		basic_input_memory_stream(Container&& c, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Reading
 		void read(span<byte> buffer) override;
+		
+		// Buffer management
 		const Container& get_buffer() const noexcept &;
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
@@ -710,6 +772,8 @@ TODO
 	};
 
 TODO
+
+#### Constructors
 
 	basic_input_memory_stream(format f = {});
 
@@ -738,7 +802,7 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-<!-- -->
+#### Position
 
 	void set_position(streamsize position) override;
 
@@ -762,9 +826,9 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
-<!-- -->
+#### Reading
 
-	virtual void read(span<byte> buffer) = 0;
+	void read(span<byte> buffer) override;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -773,19 +837,26 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-## Class template `basic_output_memory_stream`
+### Class template `basic_output_memory_stream`
 
 	template <typename Container>
 	class basic_output_memory_stream final : public output_stream
 	{
 	public:
+		// Constructors
 		basic_output_memory_stream(format f = {});
 		basic_output_memory_stream(const Container& c, format f = {});
 		basic_output_memory_stream(Container&& c, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Writing
 		void write(span<const byte> buffer) override;
+		
+		// Buffer management
 		const Container& get_buffer() const noexcept &;
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
@@ -797,6 +868,8 @@ TODO
 	};
 
 TODO
+
+#### Constructors
 
 	basic_output_memory_stream(format f = {});
 
@@ -825,7 +898,7 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-<!-- -->
+#### Position
 
 	void set_position(streamsize position) override;
 
@@ -849,9 +922,9 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
-<!-- -->
+#### Writing
 
-	virtual void write(span<const byte> buffer) = 0;
+	void write(span<const byte> buffer) override;
 
 *Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -860,20 +933,29 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
-## Class template `basic_memory_stream`
+### Class template `basic_memory_stream`
 
 	template <typename Container>
 	class basic_memory_stream final : public stream
 	{
 	public:
+		// Constructors
 		basic_memory_stream(format f = {});
 		basic_memory_stream(const Container& c, format f = {});
 		basic_memory_stream(Container&& c, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Reading
 		void read(span<byte> buffer) override;
+		
+		// Writing
 		void write(span<const byte> buffer) override;
+		
+		// Buffer management
 		const Container& get_buffer() const noexcept &;
 		Container get_buffer() noexcept &&;
 		void set_buffer(const Container& new_buffer);
@@ -885,6 +967,8 @@ TODO
 	};
 
 TODO
+
+#### Constructors
 
 	basic_memory_stream(format f = {});
 
@@ -913,7 +997,7 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-<!-- -->
+#### Position
 
 	void set_position(streamsize position) override;
 
@@ -937,9 +1021,9 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
-<!-- -->
+#### Reading
 
-	virtual void read(span<byte> buffer) = 0;
+	void read(span<byte> buffer) override;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -948,9 +1032,9 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-<!-- -->
+#### Writing
 
-	virtual void write(span<const byte> buffer) = 0;
+	void write(span<const byte> buffer) override;
 
 *Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -959,44 +1043,63 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
-## Class `input_file_stream`
+## File streams
+
+### Class `input_file_stream`
 
 	class input_file_stream final : public input_stream
 	{
 	public:
+		// Constructors
 		input_file_stream(const filesystem::path& file_name, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Reading
 		void read(span<byte> buffer) override;
 	};
 
 TODO
 
-## Class `output_file_stream`
+### Class `output_file_stream`
 
 	class output_file_stream final : public output_stream
 	{
 	public:
+		// Constructors
 		output_file_stream(const filesystem::path& file_name, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Writing
 		void write(span<const byte> buffer) override;
 	};
 
 TODO
 
-## Class `file_stream`
+### Class `file_stream`
 
 	class file_stream final : public stream
 	{
 	public:
+		// Constructors
 		file_stream(const filesystem::path& file_name, format f = {});
+		
+		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		
+		// Reading
 		void read(span<byte> buffer) override;
+		
+		// Writing
 		void write(span<const byte> buffer) override;
 	};
 
