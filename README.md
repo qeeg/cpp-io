@@ -308,7 +308,7 @@ TODO
 * `reached_end_of_file` - tried to read past the end of stream.
 * `physical_error` - if physical I/O error has occured.
 
-## Class `output_stream`
+### Class `output_stream`
 
 	class output_stream : public virtual stream_base
 	{
@@ -530,9 +530,13 @@ TODO
 
 #### Position
 
+	streamsize get_position() override;
+
+*Returns:* `position_`.
+
 	void set_position(streamsize position) override;
 
-*Effects:* Sets the position of the stream to the given value.
+*Ensures:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -611,9 +615,13 @@ TODO
 
 #### Position
 
+	streamsize get_position() override;
+
+*Returns:* `position_`.
+
 	void set_position(streamsize position) override;
 
-*Effects:* Sets the position of the stream to the given value.
+*Ensures:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -695,9 +703,13 @@ TODO
 
 #### Position
 
+	streamsize get_position() override;
+
+*Returns:* `position_`.
+
 	void set_position(streamsize position) override;
 
-*Effects:* Sets the position of the stream to the given value.
+*Ensures:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -804,9 +816,13 @@ TODO
 
 #### Position
 
+	streamsize get_position() override;
+
+*Returns:* `position_`.
+
 	void set_position(streamsize position) override;
 
-*Effects:* Sets the position of the stream to the given value.
+*Ensures:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -900,9 +916,13 @@ TODO
 
 #### Position
 
+	streamsize get_position() override;
+
+*Returns:* `position_`.
+
 	void set_position(streamsize position) override;
 
-*Effects:* Sets the position of the stream to the given value.
+*Ensures:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -999,9 +1019,13 @@ TODO
 
 #### Position
 
+	streamsize get_position() override;
+
+*Returns:* `position_`.
+
 	void set_position(streamsize position) override;
 
-*Effects:* Sets the position of the stream to the given value.
+*Ensures:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
