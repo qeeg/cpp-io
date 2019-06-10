@@ -471,9 +471,43 @@ Example implementation:
 		void read(span<byte> buffer) override;
 		span<const byte> get_buffer() const noexcept;
 		void set_buffer(span<const byte> new_buffer) noexcept;
+	private:
+		span<const byte> buffer_; // exposition only
+		size_t position_; // exposition only
 	};
 
 TODO
+
+	void set_position(streamsize position) override;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative.
+* `value_too_large` - if position is greater than `numeric_limits<size_t>::max()`.
+
+<!-- -->
+
+	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative.
+* `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+
+	virtual void read(span<byte> buffer) = 0;
+
+*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
 ## Class `output_span_stream`
 
@@ -488,9 +522,43 @@ TODO
 		void write(span<const byte> buffer) override;
 		span<byte> get_buffer() const noexcept;
 		void set_buffer(span<byte> new_buffer) noexcept;
+	private:
+		span<byte> buffer_; // exposition only
+		size_t position_; // exposition only
 	};
 
 TODO
+
+	void set_position(streamsize position) override;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative.
+* `value_too_large` - if position is greater than `numeric_limits<size_t>::max()`.
+
+<!-- -->
+
+	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative.
+* `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+
+	virtual void write(span<const byte> buffer) = 0;
+
+*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
 
 ## Class `span_stream`
 
@@ -506,9 +574,52 @@ TODO
 		void write(span<const byte> buffer) override;
 		span<byte> get_buffer() const noexcept;
 		void set_buffer(span<byte> new_buffer) noexcept;
+	private:
+		span<byte> buffer_; // exposition only
+		size_t position_; // exposition only
 	};
 
 TODO
+
+	void set_position(streamsize position) override;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative.
+* `value_too_large` - if position is greater than `numeric_limits<size_t>::max()`.
+
+<!-- -->
+
+	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative.
+* `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+
+	virtual void read(span<byte> buffer) = 0;
+
+*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+
+	virtual void write(span<const byte> buffer) = 0;
+
+*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
 
 ## Class template `basic_input_memory_stream`
 
@@ -527,9 +638,43 @@ TODO
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
 		void reset_buffer() noexcept;
+	private:
+		Container buffer_; // exposition only
+		typename Container::size_type position_; // exposition only
 	};
 
 TODO
+
+	void set_position(streamsize position) override;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative.
+* `value_too_large` - if position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+<!-- -->
+
+	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative.
+* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+	virtual void read(span<byte> buffer) = 0;
+
+*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
 ## Class template `basic_output_memory_stream`
 
@@ -548,9 +693,43 @@ TODO
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
 		void reset_buffer() noexcept;
+	private:
+		Container buffer_; // exposition only
+		typename Container::size_type position_; // exposition only
 	};
 
 TODO
+
+	void set_position(streamsize position) override;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative.
+* `value_too_large` - if position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+<!-- -->
+
+	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative.
+* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+	virtual void write(span<const byte> buffer) = 0;
+
+*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
 ## Class template `basic_memory_stream`
 
@@ -570,9 +749,52 @@ TODO
 		void set_buffer(const Container& new_buffer);
 		void set_buffer(Container&& new_buffer);
 		void reset_buffer() noexcept;
+	private:
+		Container buffer_; // exposition only
+		typename Container::size_type position_; // exposition only
 	};
 
 TODO
+
+	void set_position(streamsize position) override;
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative.
+* `value_too_large` - if position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+<!-- -->
+
+	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative.
+* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+	virtual void read(span<byte> buffer) = 0;
+
+*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+
+	virtual void write(span<const byte> buffer) = 0;
+
+*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
 ## Class `input_file_stream`
 
