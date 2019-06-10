@@ -478,6 +478,25 @@ Example implementation:
 
 TODO
 
+	input_span_stream(format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `empty(buffer_) == true`,
+* `position_ == 0`.
+
+<!-- -->
+
+	input_span_stream(span<const byte> buffer, format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `data(buffer_) == data(buffer)`,
+* `size(buffer_) == size(buffer)`,
+* `position_ == 0`.
+
+<!-- -->
+
 	void set_position(streamsize position) override;
 
 *Effects:* Sets the position of the stream to the given value.
@@ -530,6 +549,25 @@ TODO
 	};
 
 TODO
+
+	output_span_stream(format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `empty(buffer_) == true`,
+* `position_ == 0`.
+
+<!-- -->
+
+	output_span_stream(span<byte> buffer, format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `data(buffer_) == data(buffer)`,
+* `size(buffer_) == size(buffer)`,
+* `position_ == 0`.
+
+<!-- -->
 
 	void set_position(streamsize position) override;
 
@@ -585,6 +623,25 @@ TODO
 
 TODO
 
+	span_stream(format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `empty(buffer_) == true`,
+* `position_ == 0`.
+
+<!-- -->
+
+	span_stream(span<byte> buffer, format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `data(buffer_) == data(buffer)`,
+* `size(buffer_) == size(buffer)`,
+* `position_ == 0`.
+
+<!-- -->
+
 	void set_position(streamsize position) override;
 
 *Effects:* Sets the position of the stream to the given value.
@@ -636,7 +693,8 @@ TODO
 	{
 	public:
 		basic_input_memory_stream(format f = {});
-		basic_input_memory_stream(Container c, format f = {});
+		basic_input_memory_stream(const Container& c, format f = {});
+		basic_input_memory_stream(Container&& c, format f = {});
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -652,6 +710,35 @@ TODO
 	};
 
 TODO
+
+	basic_input_memory_stream(format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `buffer_ == Container{}`,
+* `position_ == 0`.
+
+<!-- -->
+
+	basic_input_memory_stream(const Container& c, format f = {});
+
+*Effects:* Initializes `buffer_` with `c`.
+
+*Ensures:*
+* `get_format() == f`,
+* `position_ == 0`.
+
+<!-- -->
+
+	basic_input_memory_stream(Container&& c, format f = {});
+
+*Effects:* Initializes `buffer_` with `move(c)`.
+
+*Ensures:*
+* `get_format() == f`,
+* `position_ == 0`.
+
+<!-- -->
 
 	void set_position(streamsize position) override;
 
@@ -693,7 +780,8 @@ TODO
 	{
 	public:
 		basic_output_memory_stream(format f = {});
-		basic_output_memory_stream(Container c, format f = {});
+		basic_output_memory_stream(const Container& c, format f = {});
+		basic_output_memory_stream(Container&& c, format f = {});
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -709,6 +797,35 @@ TODO
 	};
 
 TODO
+
+	basic_output_memory_stream(format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `buffer_ == Container{}`,
+* `position_ == 0`.
+
+<!-- -->
+
+	basic_output_memory_stream(const Container& c, format f = {});
+
+*Effects:* Initializes `buffer_` with `c`.
+
+*Ensures:*
+* `get_format() == f`,
+* `position_ == 0`.
+
+<!-- -->
+
+	basic_output_memory_stream(Container&& c, format f = {});
+
+*Effects:* Initializes `buffer_` with `move(c)`.
+
+*Ensures:*
+* `get_format() == f`,
+* `position_ == 0`.
+
+<!-- -->
 
 	void set_position(streamsize position) override;
 
@@ -750,7 +867,8 @@ TODO
 	{
 	public:
 		basic_memory_stream(format f = {});
-		basic_memory_stream(Container c, format f = {});
+		basic_memory_stream(const Container& c, format f = {});
+		basic_memory_stream(Container&& c, format f = {});
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
 		void seek_position(streamoff offset, ios_base::seekdir direction) override;
@@ -767,6 +885,35 @@ TODO
 	};
 
 TODO
+
+	basic_memory_stream(format f = {});
+
+*Ensures:*
+* `get_format() == f`,
+* `buffer_ == Container{}`,
+* `position_ == 0`.
+
+<!-- -->
+
+	basic_memory_stream(const Container& c, format f = {});
+
+*Effects:* Initializes `buffer_` with `c`.
+
+*Ensures:*
+* `get_format() == f`,
+* `position_ == 0`.
+
+<!-- -->
+
+	basic_memory_stream(Container&& c, format f = {});
+
+*Effects:* Initializes `buffer_` with `move(c)`.
+
+*Ensures:*
+* `get_format() == f`,
+* `position_ == 0`.
+
+<!-- -->
 
 	void set_position(streamsize position) override;
 
