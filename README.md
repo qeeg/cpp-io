@@ -266,6 +266,7 @@ TODO
 * `invalid_argument` - if position is negative and the stream doesn't support that.
 * `value_too_large` - if position is greater than the maximum size supported by the stream.
 
+
 	virtual void seek_position(streamoff offset, ios_base::seekdir direction) = 0;
 
 *Effects:* TODO
