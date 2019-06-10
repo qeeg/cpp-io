@@ -95,30 +95,36 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	namespace io
 	{
 	
+	// Error handling
 	error_code make_error_code(io_errc e) noexcept;
 	error_condition make_error_condition(io_errc e) noexcept;
 	
 	const error_category& category() noexcept;
 	
 	class io_error;
-
+	
+	// Stream base classes
 	class stream_base;
 	class input_stream;
 	class output_stream;
 	class stream;
 	
+	// IO concepts
 	template <typename T>
 	concept CustomlyReadable = see below;
 	template <typename T>
 	concept CustomlyWritable = see below;
 	
+	// Customization points
 	inline unspecified read;
 	inline unspecified write;
 	
+	// Span streams
 	class input_span_stream;
 	class output_span_stream;
 	class span_stream;
 	
+	// Memory streams
 	template <typename Container>
 	class basic_input_memory_stream;
 	template <typename Container>
@@ -130,6 +136,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	using output_memory_stream = basic_output_memory_stream<vector<byte>>;
 	using memory_stream = basic_memory_stream<vector<byte>>;
 	
+	// File streams
 	class input_file_stream;
 	class output_file_stream;
 	class file_stream;
@@ -142,9 +149,12 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	class format final
 	{
 	public:
+		// Constructor
 		constexpr format(endian endianness = endian::native,
 			floating_point_format float_format = floating_point_format::native,
 			bom_handling bh = bom_handling::none);
+		
+		// Member functions
 		constexpr endian get_endianness() const noexcept;
 		constexpr void set_endianness(endian new_endianness) noexcept;
 		constexpr floating_point_format get_floating_point_format() const noexcept;
@@ -160,15 +170,19 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 TODO
 
+#### Constructor
+
 	constexpr format(endian endianness = endian::native,
 		floating_point_format float_format = floating_point_format::native,
 		bom_handling bh = bom_handling::none);
 
 *Ensures:* `endianness_ == endianness`, `float_format_ == float_format` and `bom_handling_ == bh`.
 
+#### Member functions
+
 	constexpr endian get_endianness() const noexcept;
 
-*Returns:* `enidianness_`.
+*Returns:* `endianness_`.
 
 	constexpr void set_endianness(endian new_endianness) noexcept;
 
@@ -195,15 +209,17 @@ TODO
 
 	const error_category& category() noexcept;
 
-TODO
+*Returns:* A reference to an object of a type derived from class `error_category`. All calls to this function shall return references to the same object.
+
+*Remarks:* The object’s `default_error_condition` and `equivalent` virtual functions shall behave as specified for the class `error_category`. The object’s `name` virtual function shall return a pointer to the string `"io"`.
 
 	error_code make_error_code(io_errc e) noexcept;
 
-TODO
+*Returns:* `error_code(static_cast<int>(e), io::category())`.
 
 	error_condition make_error_condition(io_errc e) noexcept;
 
-TODO
+*Returns:* `error_condition(static_cast<int>(e), io::category())`.
 
 ## Class `io_error`
 
@@ -223,6 +239,7 @@ TODO
 	class stream_base
 	{
 	public:
+		// Constructor and destructor
 		constexpr stream_base(format f = {});
 		virtual ~stream_base() = default;
 		
@@ -240,6 +257,8 @@ TODO
 	};
 
 TODO
+
+#### Constructor and destructor
 
 	constexpr stream_base(format f = {});
 
@@ -288,6 +307,7 @@ TODO
 	class input_stream : public virtual stream_base
 	{
 	public:
+		// Constructor
 		input_stream(format f = {});
 		
 		// Reading
@@ -295,6 +315,12 @@ TODO
 	};
 
 TODO
+
+#### Constructor
+
+	input_stream(format f = {});
+
+*Ensures:* `get_format() == f`.
 
 #### Reading
 
@@ -313,6 +339,7 @@ TODO
 	class output_stream : public virtual stream_base
 	{
 	public:
+		// Constructor
 		output_stream(format f = {});
 		
 		// Writing
@@ -320,6 +347,12 @@ TODO
 	};
 
 TODO
+
+#### Constructor
+
+	output_stream(format f = {});
+
+*Ensures:* `get_format() == f`.
 
 #### Writing
 
@@ -338,10 +371,21 @@ TODO
 	class stream : public input_stream, public output_stream
 	{
 	public:
+		// Constructor
 		stream(format f = {});
 	};
 
-## Concept `CustomlyReadable`
+TODO
+
+#### Constructor
+
+	stream(format f = {});
+
+*Ensures:* `get_format() == f`.
+
+## IO concepts
+
+### Concept `CustomlyReadable`
 
 	template <typename T>
 	concept CustomlyReadable =
@@ -352,7 +396,7 @@ TODO
 
 TODO
 
-## Concept `CustomlyWritable`
+### Concept `CustomlyWritable`
 
 	template <typename T>
 	concept CustomlyWritable =
