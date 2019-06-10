@@ -83,7 +83,9 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	{
 		invalid_argument = implementation-defined,
 		value_too_large = implementation-defined,
-		reached_end_of_file = implementation-defined
+		reached_end_of_file = implementation-defined,
+		physical_error = implementation-defined,
+		file_too_large = implementation-defined
 	};
 	
 	}
@@ -286,6 +288,7 @@ TODO
 
 *Error conditions:*
 * `reached_end_of_file` - tried to read past the end of stream.
+* `physical_error` - if physical I/O error has occured.
 
 ## Class `output_stream`
 
@@ -305,7 +308,8 @@ TODO
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `reached_end_of_file` - tried to write past the end of stream with static size.
+* `file_too_large` - tried to write past the maximum size supported by the stream.
+* `physical_error` - if physical I/O error has occured.
 
 ## Class `stream`
 
