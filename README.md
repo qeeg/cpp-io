@@ -60,13 +60,37 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 ## Header `<io>` synopsis
 
-	namespace std::io
+	namespace std
+	{
+	namespace io
 	{
 	
 	enum class floating_point_format;
 	enum class bom_handling;
 
 	class format;
+	
+	enum class io_errc
+	{
+		invalid_argument = implementation-defined,
+		value_too_large = implementation-defined,
+		reached_end_of_file = implementation-defined
+	};
+	
+	}
+	
+	template <> struct is_error_code_enum<io::io_errc> : public true_type { };
+	
+	namespace io
+	{
+	
+	error_code make_error_code(io_errc e) noexcept;
+	error_condition make_error_condition(io_errc e) noexcept;
+	
+	const error_category& category() noexcept;
+	
+	class io_error;
+
 	class stream_base;
 	class input_stream;
 	class output_stream;
@@ -99,6 +123,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	class output_file_stream;
 	class file_stream;
 	
+	}
 	}
 
 ## Type `floating_point_format`
@@ -175,6 +200,31 @@ TODO
 
 *Ensures:* `bom_handling_ == new_handling`.
 
+## Error handling
+
+	const error_category& category() noexcept;
+
+TODO
+
+	error_code make_error_code(io_errc e) noexcept;
+
+TODO
+
+	error_condition make_error_condition(io_errc e) noexcept;
+
+TODO
+
+## Class `io_error`
+
+	class io_error : public system_error
+	{
+	public:
+		io_error(const string& message, error_code ec);
+		io_error(const char* message, error_code ec);
+	};
+
+TODO
+
 ## Class `stream_base`
 
 	class stream_base
@@ -210,13 +260,21 @@ TODO
 
 *Effects:* Sets the position of the stream to the given value.
 
-*Throws:* TODO
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if position is negative and the stream doesn't support that.
+* `value_too_large` - if position is greater than the maximum size supported by the stream.
 
 	virtual void seek_position(streamoff offset, ios_base::seekdir direction) = 0;
 
 *Effects:* TODO
 
-*Throws:* TODO
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `invalid_argument` - if resulting position is negative and the stream doesn't support that.
+* `value_too_large` - if resulting position is greater than the maximum size supported by the stream.
 
 ## Class `input_stream`
 
@@ -233,7 +291,10 @@ TODO
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
 
-*Throws:* TODO
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `reached_end_of_file` - tried to read past the end of stream.
 
 ## Class `output_stream`
 
@@ -250,7 +311,10 @@ TODO
 
 *Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
 
-*Throws:* TODO
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+* `reached_end_of_file` - tried to write past the end of stream with static size.
 
 ## Class `stream`
 
