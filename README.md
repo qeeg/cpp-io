@@ -567,6 +567,19 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
+#### Buffer management
+
+	span<const byte> get_buffer() const noexcept;
+
+*Returns:* `buffer_`.
+
+	void set_buffer(span<const byte> new_buffer) noexcept;
+
+*Ensures:*
+* `data(buffer_) == data(new_buffer)`,
+* `size(buffer_) == size(new_buffer)`,
+* `position_ == 0`.
+
 ### Class `output_span_stream`
 
 	class output_span_stream final : public output_stream
@@ -651,6 +664,19 @@ TODO
 
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
+
+#### Buffer management
+
+	span<byte> get_buffer() const noexcept;
+
+*Returns:* `buffer_`.
+
+	void set_buffer(span<byte> new_buffer) noexcept;
+
+*Ensures:*
+* `data(buffer_) == data(new_buffer)`,
+* `size(buffer_) == size(new_buffer)`,
+* `position_ == 0`.
 
 ### Class `span_stream`
 
@@ -750,6 +776,19 @@ TODO
 
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
+
+#### Buffer management
+
+	span<byte> get_buffer() const noexcept;
+
+*Returns:* `buffer_`.
+
+	void set_buffer(span<byte> new_buffer) noexcept;
+
+*Ensures:*
+* `data(buffer_) == data(new_buffer)`,
+* `size(buffer_) == size(new_buffer)`,
+* `position_ == 0`.
 
 ## Memory streams
 
@@ -853,6 +892,36 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
+#### Buffer management
+
+	const Container& get_buffer() const noexcept &;
+
+*Returns:* `buffer_`.
+
+	Container get_buffer() noexcept &&;
+
+*Returns:* `move(buffer_)`.
+
+	void set_buffer(const Container& new_buffer);
+
+*Ensures:*
+* `buffer_ == new_buffer`.
+* `position_ == 0`.
+
+<!-- -->
+
+	void set_buffer(Container&& new_buffer);
+
+*Effects:* Move assigns `new_buffer` to `buffer_`.
+
+*Ensures:* `position_ == 0`.
+
+	void reset_buffer() noexcept;
+
+*Effects:* Equivalent to `buffer_.clear()`.
+
+*Ensures:* `position_ == 0`.
+
 ### Class template `basic_output_memory_stream`
 
 	template <typename Container>
@@ -952,6 +1021,36 @@ TODO
 
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
+
+#### Buffer management
+
+	const Container& get_buffer() const noexcept &;
+
+*Returns:* `buffer_`.
+
+	Container get_buffer() noexcept &&;
+
+*Returns:* `move(buffer_)`.
+
+	void set_buffer(const Container& new_buffer);
+
+*Ensures:*
+* `buffer_ == new_buffer`.
+* `position_ == 0`.
+
+<!-- -->
+
+	void set_buffer(Container&& new_buffer);
+
+*Effects:* Move assigns `new_buffer` to `buffer_`.
+
+*Ensures:* `position_ == 0`.
+
+	void reset_buffer() noexcept;
+
+*Effects:* Equivalent to `buffer_.clear()`.
+
+*Ensures:* `position_ == 0`.
 
 ### Class template `basic_memory_stream`
 
@@ -1067,6 +1166,36 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
+#### Buffer management
+
+	const Container& get_buffer() const noexcept &;
+
+*Returns:* `buffer_`.
+
+	Container get_buffer() noexcept &&;
+
+*Returns:* `move(buffer_)`.
+
+	void set_buffer(const Container& new_buffer);
+
+*Ensures:*
+* `buffer_ == new_buffer`.
+* `position_ == 0`.
+
+<!-- -->
+
+	void set_buffer(Container&& new_buffer);
+
+*Effects:* Move assigns `new_buffer` to `buffer_`.
+
+*Ensures:* `position_ == 0`.
+
+	void reset_buffer() noexcept;
+
+*Effects:* Equivalent to `buffer_.clear()`.
+
+*Ensures:* `position_ == 0`.
+
 ## File streams
 
 ### Class `input_file_stream`
@@ -1074,8 +1203,11 @@ TODO
 	class input_file_stream final : public input_stream
 	{
 	public:
-		// Constructors
+		// Construct/copy/destroy
 		input_file_stream(const filesystem::path& file_name, format f = {});
+		input_file_stream(const input_file_stream&) = delete;
+		~input_file_stream();
+		input_file_stream& operator=(const input_file_stream&) = delete;
 		
 		// Position
 		streamsize get_position() override;
@@ -1093,8 +1225,11 @@ TODO
 	class output_file_stream final : public output_stream
 	{
 	public:
-		// Constructors
+		// Construct/copy/destroy
 		output_file_stream(const filesystem::path& file_name, format f = {});
+		output_file_stream(const output_file_stream&) = delete;
+		~output_file_stream();
+		output_file_stream& operator=(const output_file_stream&) = delete;
 		
 		// Position
 		streamsize get_position() override;
@@ -1112,8 +1247,11 @@ TODO
 	class file_stream final : public stream
 	{
 	public:
-		// Constructors
+		// Construct/copy/destroy
 		file_stream(const filesystem::path& file_name, format f = {});
+		file_stream(const file_stream&) = delete;
+		~file_stream();
+		file_stream& operator=(const file_stream&) = delete;
 		
 		// Position
 		streamsize get_position() override;
