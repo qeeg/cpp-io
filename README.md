@@ -65,8 +65,17 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	namespace io
 	{
 	
-	enum class floating_point_format;
-	enum class bom_handling;
+	enum class floating_point_format
+	{
+		iec559,
+		native
+	};
+
+	enum class bom_handling
+	{
+		none,
+		read_write
+	};
 
 	class format;
 	
@@ -125,26 +134,6 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	
 	}
 	}
-
-## Type `floating_point_format`
-
-	enum class floating_point_format
-	{
-		iec559,
-		native
-	};
-
-TODO
-
-## Type `bom_handling`
-
-	enum class bom_handling
-	{
-		none,
-		read_write
-	};
-
-TODO
 
 ## Class `format`
 
