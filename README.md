@@ -500,6 +500,8 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
+<!-- -->
+
 	virtual void read(span<byte> buffer) = 0;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
@@ -550,6 +552,8 @@ TODO
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+
+<!-- -->
 
 	virtual void write(span<const byte> buffer) = 0;
 
@@ -603,6 +607,8 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
+<!-- -->
+
 	virtual void read(span<byte> buffer) = 0;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
@@ -611,6 +617,8 @@ TODO
 
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+
+<!-- -->
 
 	virtual void write(span<const byte> buffer) = 0;
 
@@ -667,6 +675,8 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
+<!-- -->
+
 	virtual void read(span<byte> buffer) = 0;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
@@ -721,6 +731,8 @@ TODO
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+
+<!-- -->
 
 	virtual void write(span<const byte> buffer) = 0;
 
@@ -778,6 +790,8 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
+<!-- -->
+
 	virtual void read(span<byte> buffer) = 0;
 
 *Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
@@ -786,6 +800,8 @@ TODO
 
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+
+<!-- -->
 
 	virtual void write(span<const byte> buffer) = 0;
 
