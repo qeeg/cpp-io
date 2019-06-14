@@ -85,6 +85,20 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * `flush` member function was removed as there is no buffering.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
+## Implementation experience
+
+Most of the proposal can be implemented in ISO C++. Low level conversions inside `std::io::read` and `std::io::write` require knowledge of implementation defined format of integers and floating point numbers. File IO requires calling operating system API. The following table provides examples for POSIX and Windows:
+
+| Function        | POSIX   | Windows            |
+| --------------- | ------- | ------------------ |
+| Constructor     | `open`  | `CreateFile`       |
+| Destructor      | `close` | `CloseHandle`      |
+| `get_position`  | `lseek` | `SetFilePointerEx` |
+| `set_position`  | `lseek` | `SetFilePointerEx` |
+| `seek_position` | `lseek` | `SetFilePointerEx` |
+| `read`          | `read`  | `ReadFile`         |
+| `write`         | `write` | `WriteFile`        |
+
 ## Future work
 
 It is hopeful that this proposal will be used as a basis for a modern Unicode-aware text streams because text is still bytes under the hood. However, this requires solving a lot of other difficult problems. Once modern text streams are finished, it is hopeful that legacy text streams will be deprecated and eventually removed.
