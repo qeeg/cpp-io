@@ -52,6 +52,37 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * Support different endiannesses and floating point formats.
 * Stream classes should efficiently map to OS API in case of file IO.
 
+## Design decisions
+
+* It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
+* The general inheritance hierarchy of legacy text streams has more or less been preserved, hovewer, the classes has been renamed as follows:
+  * `ios_base` and `basic_ios` -> `stream_base`.
+  * `basic_istream` -> `input_stream`.
+  * `basic_ostream` -> `output_stream`.
+  * `basic_stream` -> `iostream`.
+  * `basic_istringstream` -> `basic_input_memory_stream`.
+  * `basic_ostringstream` -> `basic_output_memory_stream`.
+  * `basic_stringstream` -> `basic_memory_stream`.
+  * `basic_ifstream` -> `input_file_stream`.
+  * `basic_ofstream` -> `output_file_stream`.
+  * `basic_fstream` -> `file_stream`.
+* The `streambuf` part of legacy text streams has been dropped.
+* Fixed size streams have been added:
+  * `input_span_stream`.
+  * `output_span_stream`.
+  * `span_stream`.
+* Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
+* All text formatting flags have been removed. A new class `format` has been introduced for binary format. The separate class is used in order to make the change of stream format atomic.
+* Parts related of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and always start chunks of data with size, any kind of IO error is usually unrecoverable.
+* Since there is no more buffering because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
+  * `tellg` and `tellp` -> `get_position`.
+  * Single argument versions of `seekg` and `seekp` -> `set_position`.
+  * Double argument versions of `seekg` and `seekp` -> `seek_position`.
+* `std::basic_ios::pos_type` has been replaced with `std::streampos`.
+* `std::basic_ios::off_type` has been replaced with `std::streamoff`.
+* `read` and `write` member functions take `std::span`.
+* `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
+
 ## Future work
 
 It is hopeful that this proposal will be used as a basis for a modern Unicode-aware text streams because text is still bytes under the hood. However, this requires solving a lot of other difficult problems. Once modern text streams are finished, it is hopeful that legacy text streams will be deprecated and eventually removed.
