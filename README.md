@@ -78,7 +78,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
   * Double argument versions of `seekg` and `seekp` -> `seek_position`.
-* `std::basic_ios::pos_type` has been replaced with `std::streampos`.
+* `std::basic_ios::pos_type` has been replaced with `std::streamsize`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `gcount`, `get`, `getline`, `ignore`, `peek`, `readsome`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
 * `read` and `write` member functions take `std::span`.
