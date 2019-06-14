@@ -55,7 +55,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 ## Design decisions
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
-* The general inheritance hierarchy of legacy text streams has more or less been preserved, hovewer, the classes has been renamed as follows:
+* The general inheritance hierarchy of legacy text streams has more or less been preserved, hovewer, the classes have been renamed as follows:
   * `ios_base` and `basic_ios` -> `stream_base`.
   * `basic_istream` -> `input_stream`.
   * `basic_ostream` -> `output_stream`.
