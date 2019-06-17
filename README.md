@@ -237,6 +237,53 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 		}
 	}
 
+### Example 5: Resource Interchange File Format
+
+There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
+
+	#include <io>
+	#include <array>
+	
+	constexpr std::array<std::byte, 4> RIFFChunkID{
+		std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'F'}};
+	constexpr std::array<std::byte, 4> RIFXChunkID{
+		std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'X'}};
+	
+	class RIFFFile
+	{
+	public:
+		RIFFFile(std::io::input_stream& stream)
+		{
+			std::array<std::byte, 4> chunk_id;
+			std::io::read(stream, chunk_id);
+			if (chunk_id == RIFFChunkID)
+			{
+				// We have little endian file.
+				// Set format to little endian.
+				auto format = stream.get_format();
+				format.set_endianness(std::endian::little);
+				stream.set_format(format);
+			}
+			else if (chunk_id == RIFXChunkID)
+			{
+				// We have big endian file.
+				// Set format to big endian.
+				auto format = stream.get_format();
+				format.set_endianness(std::endian::big);
+				stream.set_format(format);
+			}
+			else
+			{
+				throw /* ... */
+			}
+			// We have set correct endianness based of the 1st chunk id.
+			// The rest of the file will be deserialized correctly according to
+			// our format.
+		}
+	private:
+		/* ... */
+	}
+
 TODO: More tutorials? More explanations.
 
 ## Implementation experience
