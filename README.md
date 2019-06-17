@@ -151,6 +151,13 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	class io_error;
 	
 	// Stream base classes
+	enum class seek_direction
+	{
+		beginning,
+		current,
+		end
+	};
+
 	class stream_base;
 	class input_stream;
 	class output_stream;
@@ -297,8 +304,7 @@ TODO
 		// Position
 		virtual streamsize get_position() = 0;
 		virtual void set_position(streamsize position) = 0;
-		virtual void seek_position(streamoff offset, ios_base::seekdir direction)
-			= 0;
+		virtual void seek_position(streamoff offset, seek_direction direction) = 0;
 	private:
 		format format_; // exposition only
 	};
@@ -339,7 +345,7 @@ TODO
 
 <!-- -->
 
-	virtual void seek_position(streamoff offset, ios_base::seekdir direction) = 0;
+	virtual void seek_position(streamoff offset, seek_direction direction) = 0;
 
 *Effects:* TODO
 
@@ -585,7 +591,7 @@ Example implementation:
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Reading
 		void read(span<byte> buffer) override;
@@ -637,7 +643,7 @@ TODO
 
 <!-- -->
 
-	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
 
 *Effects:* TODO
 
@@ -683,7 +689,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Writing
 		void write(span<const byte> buffer) override;
@@ -735,7 +741,7 @@ TODO
 
 <!-- -->
 
-	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
 
 *Effects:* TODO
 
@@ -781,7 +787,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Reading
 		void read(span<byte> buffer) override;
@@ -836,7 +842,7 @@ TODO
 
 <!-- -->
 
-	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
 
 *Effects:* TODO
 
@@ -897,7 +903,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Reading
 		void read(span<byte> buffer) override;
@@ -962,7 +968,7 @@ TODO
 
 <!-- -->
 
-	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
 
 *Effects:* TODO
 
@@ -1027,7 +1033,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Writing
 		void write(span<const byte> buffer) override;
@@ -1092,7 +1098,7 @@ TODO
 
 <!-- -->
 
-	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
 
 *Effects:* TODO
 
@@ -1157,7 +1163,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Reading
 		void read(span<byte> buffer) override;
@@ -1225,7 +1231,7 @@ TODO
 
 <!-- -->
 
-	void seek_position(streamoff offset, ios_base::seekdir direction) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
 
 *Effects:* TODO
 
@@ -1303,7 +1309,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Reading
 		void read(span<byte> buffer) override;
@@ -1325,7 +1331,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Writing
 		void write(span<const byte> buffer) override;
@@ -1347,7 +1353,7 @@ TODO
 		// Position
 		streamsize get_position() override;
 		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, ios_base::seekdir direction) override;
+		void seek_position(streamoff offset, seek_direction direction) override;
 		
 		// Reading
 		void read(span<byte> buffer) override;
@@ -1363,6 +1369,5 @@ TODO
 * Concepts vs inheritance
 * `format` as part of the stream class or as separate argument to `io::read` and `io::write`.
 * `std::span` vs `std::ContiguousRange`
-* Dependency on `std::ios_base`.
 * Error handling
 * `filesystem::path_view`
