@@ -244,6 +244,7 @@ There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is d
 	#include <io>
 	#include <array>
 	
+	// C++ doesn't have ASCII literals but we can use UTF-8 literals instead.
 	constexpr std::array<std::byte, 4> RIFFChunkID{
 		std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'F'}};
 	constexpr std::array<std::byte, 4> RIFXChunkID{
@@ -276,9 +277,12 @@ There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is d
 			{
 				throw /* ... */
 			}
-			// We have set correct endianness based of the 1st chunk id.
+			// We have set correct endianness based on the 1st chunk id.
 			// The rest of the file will be deserialized correctly according to
 			// our format.
+			std::uint32_t chunk_size;
+			std::io::read(stream, chunk_size);
+			/* ... */
 		}
 	private:
 		/* ... */
