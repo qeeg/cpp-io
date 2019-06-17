@@ -87,6 +87,74 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * `flush` member function was removed as there is no buffering.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
+## Tutorial
+
+	#include <io>
+	#include <iostream>
+
+	int main()
+	{
+		unsigned int value = 42;
+		
+		// Create a stream
+		std::io::output_memory_stream s;
+		
+		// Write the value to the stream
+		std::io::write(s, value);
+		
+		// Get reference to the buffer of the stream
+		const auto& buffer = s.get_buffer();
+		
+		// Print the buffer
+		for (auto byte : buffer)
+		{
+			std::cout << std::to_integer<int>(byte) << ' ';
+		}
+	}
+
+The result is implementation defined. For a random value it would depend on `CHAR_BIT`, `sizeof(unsigned int)` and `std::endian::native`. On AMD64 this will print:
+
+	42 0 0 0
+
+This is because `CHAR_BIT` is 8, `sizeof(unsigned int)` is 4 and `std::endian::native == std::endian::little`.
+
+We can be more strict and have more portable layout:
+
+	#include <cstdint>
+	#include <io>
+	#include <iostream>
+	
+	static_assert(CHAR_BIT == 8)
+
+	int main()
+	{
+		std::uint32_t value = 42;
+		
+		// Create a specific binary format
+		std::io::format f{std::endian::big};
+		
+		// Create a stream
+		std::io::output_memory_stream s{f};
+		
+		// Write the value to the stream
+		std::io::write(s, value);
+		
+		// Get reference to the buffer of the stream
+		const auto& buffer = s.get_buffer();
+		
+		// Print the buffer
+		for (auto byte : buffer)
+		{
+			std::cout << std::to_integer<int>(byte) << ' ';
+		}
+	}
+
+This will either fail to compile on systems where `CHAR_BIT != 8` or print:
+
+	0 0 0 42
+
+TODO: More tutorials
+
 ## Implementation experience
 
 Most of the proposal can be implemented in ISO C++. Low level conversions inside `std::io::read` and `std::io::write` require knowledge of implementation defined format of integers and floating point numbers. File IO requires calling operating system API. The following table provides examples for POSIX and Windows:
