@@ -107,7 +107,27 @@ It is hopeful that this proposal will be used as a basis for a modern Unicode-aw
 
 This proposal doesn't rule out more low-level library that exposes complex details of modern operating systems. However, the design of this library has been intentionally kept as simple as possible to be novice-friendly.
 
-## Header `<io>` synopsis
+## Open issues
+
+* Concepts vs inheritance
+* `format` as part of the stream class or as separate argument to `io::read` and `io::write`.
+* `std::span` vs `std::ContiguousRange`
+* Error handling
+* `filesystem::path_view`
+
+## Wording
+
+All text is relative to n4810.
+
+Move clauses 29.1 - 29.10 into a new clause 29.2 "Legacy text IO".
+
+Add a new clause 29.1 "Binary IO".
+
+### 29.1.? General [io.general]
+
+TODO
+
+### 29.1.? Header `<io>` synopsis [io.syn]
 
 	namespace std
 	{
@@ -200,7 +220,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 	}
 	}
 
-## Class `format`
+### 29.1.? Class `format` [io.format]
 
 	class format final
 	{
@@ -226,7 +246,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 TODO
 
-#### Constructor
+#### 29.1.?.? Constructor [io.format.cons]
 
 	constexpr format(endian endianness = endian::native,
 		floating_point_format float_format = floating_point_format::native,
@@ -234,7 +254,7 @@ TODO
 
 *Ensures:* `endianness_ == endianness`, `float_format_ == float_format` and `bom_handling_ == bh`.
 
-#### Member functions
+#### 29.1.?.? Member functions [io.format.members]
 
 	constexpr endian get_endianness() const noexcept;
 
@@ -261,7 +281,7 @@ TODO
 
 *Ensures:* `bom_handling_ == new_handling`.
 
-## Error handling
+### 29.1.? Error handling [io.errors]
 
 	const error_category& category() noexcept;
 
@@ -277,7 +297,7 @@ TODO
 
 *Returns:* `error_condition(static_cast<int>(e), io::category())`.
 
-## Class `io_error`
+### 29.1.? Class `io_error` [ioerr.ioerr]
 
 	class io_error : public system_error
 	{
@@ -288,9 +308,9 @@ TODO
 
 TODO
 
-## Stream base classes
+### 29.1.? Stream base classes [streams.base]
 
-### Class `stream_base`
+#### 29.1.?.? Class `stream_base` [stream.base]
 
 	class stream_base
 	{
@@ -313,13 +333,13 @@ TODO
 
 TODO
 
-#### Constructor and destructor
+##### 29.1.?.?.? Constructor and destructor [stream.base.cons]
 
 	constexpr stream_base(format f = {});
 
 *Ensures:* `format_ == f`.
 
-#### Format
+##### 29.1.?.?.? Format [stream.base.format]
 
 	constexpr format get_format() const noexcept;
 
@@ -329,7 +349,7 @@ TODO
 
 *Ensures:* `format_ == f`.
 
-#### Position
+##### 29.1.?.?.? Position [stream.base.position]
 
 	virtual streamsize get_position() = 0;
 
@@ -357,7 +377,7 @@ TODO
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
 * `value_too_large` - if resulting position is greater than the maximum size supported by the stream.
 
-### Class `input_stream`
+#### 29.1.?.? Class `input_stream` [input.stream]
 
 	class input_stream : public virtual stream_base
 	{
@@ -371,13 +391,13 @@ TODO
 
 TODO
 
-#### Constructor
+##### 29.1.?.?.? Constructor [input.stream.cons]
 
 	input_stream(format f = {});
 
 *Ensures:* `get_format() == f`.
 
-#### Reading
+##### 29.1.?.?.? Reading [input.stream.read]
 
 	virtual void read(span<byte> buffer) = 0;
 
@@ -389,7 +409,7 @@ TODO
 * `reached_end_of_file` - tried to read past the end of stream.
 * `physical_error` - if physical I/O error has occured.
 
-### Class `output_stream`
+#### 29.1.?.? Class `output_stream` [output.stream]
 
 	class output_stream : public virtual stream_base
 	{
@@ -403,13 +423,13 @@ TODO
 
 TODO
 
-#### Constructor
+##### 29.1.?.?.? Constructor [output.stream.cons]
 
 	output_stream(format f = {});
 
 *Ensures:* `get_format() == f`.
 
-#### Writing
+##### 29.1.?.?.? Writing [output.stream.write]
 
 	virtual void write(span<const byte> buffer) = 0;
 
@@ -421,7 +441,7 @@ TODO
 * `file_too_large` - tried to write past the maximum size supported by the stream.
 * `physical_error` - if physical I/O error has occured.
 
-### Class `stream`
+#### 29.1.?.? Class `stream` [stream]
 
 	class stream : public input_stream, public output_stream
 	{
@@ -432,15 +452,15 @@ TODO
 
 TODO
 
-#### Constructor
+##### 29.1.?.?.? Constructor [stream.cons]
 
 	stream(format f = {});
 
 *Ensures:* `get_format() == f`.
 
-## IO concepts
+### 29.1.? IO concepts [io.concepts]
 
-### Concept `CustomlyReadable`
+#### 29.1.?.? Concept `CustomlyReadable` [io.concept.readable]
 
 	template <typename T>
 	concept CustomlyReadable =
@@ -451,7 +471,7 @@ TODO
 
 TODO
 
-### Concept `CustomlyWritable`
+#### 29.1.?.? Concept `CustomlyWritable` [io.concept.writable]
 
 	template <typename T>
 	concept CustomlyWritable =
@@ -462,8 +482,8 @@ TODO
 
 TODO
 
-## Customization points
-### `io::read`
+### 29.1.? Customization points [???]
+#### 29.1.?.1 `io::read` [io.read]
 
 The name `read` denotes a customization point object. The expression `io::read(s, E)` for some subexpression `s` of type `input_stream` and subexpression `E` with type `T` has the following effects:
 
@@ -526,7 +546,7 @@ Example implementation:
 	
 	inline customization_points::read_customization_point read;
 
-### `io::write`
+#### 29.1.?.2 `io::write` [io.write]
 
 The name `write` denotes a customization point object. The expression `io::write(s, E)` for some subexpression `s` of type `output_stream` and subexpression `E` with type `T` has the following effects:
 
@@ -579,9 +599,9 @@ Example implementation:
 
 	inline customization_points::write_customization_point write;
 
-## Span streams
+### 29.1.? Span streams [span.streams]
 
-### Class `input_span_stream`
+#### 29.1.?.1 Class `input_span_stream` [input.span.stream]
 
 	class input_span_stream final : public input_stream
 	{
@@ -608,7 +628,7 @@ Example implementation:
 
 TODO
 
-#### Constructors
+##### 29.1.?.?.? Constructors [input.span.stream.cons]
 
 	input_span_stream(format f = {});
 
@@ -627,7 +647,7 @@ TODO
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-#### Position
+##### 29.1.?.?.? Position [input.span.stream.position]
 
 	streamsize get_position() override;
 
@@ -655,7 +675,7 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
-#### Reading
+##### 29.1.?.?.? Reading [input.span.stream.read]
 
 	void read(span<byte> buffer) override;
 
@@ -666,7 +686,7 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-#### Buffer management
+##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
 	span<const byte> get_buffer() const noexcept;
 
@@ -679,7 +699,7 @@ TODO
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
 
-### Class `output_span_stream`
+#### 29.1.?.2 Class `output_span_stream` [output.span.stream]
 
 	class output_span_stream final : public output_stream
 	{
@@ -706,7 +726,7 @@ TODO
 
 TODO
 
-#### Constructors
+##### 29.1.?.?.? Constructors [output.span.stream.cons]
 
 	output_span_stream(format f = {});
 
@@ -725,7 +745,7 @@ TODO
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-#### Position
+##### 29.1.?.?.? Position [output.span.stream.position]
 
 	streamsize get_position() override;
 
@@ -753,7 +773,7 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
-#### Writing
+##### 29.1.?.?.? Writing [output.span.stream.write]
 
 	void write(span<const byte> buffer) override;
 
@@ -764,7 +784,7 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-#### Buffer management
+##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
 	span<byte> get_buffer() const noexcept;
 
@@ -777,7 +797,7 @@ TODO
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
 
-### Class `span_stream`
+#### 29.1.?.3 Class `span_stream` [span.stream]
 
 	class span_stream final : public stream
 	{
@@ -807,7 +827,7 @@ TODO
 
 TODO
 
-#### Constructors
+##### 29.1.?.?.? Constructors [span.stream.cons]
 
 	span_stream(format f = {});
 
@@ -826,7 +846,7 @@ TODO
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-#### Position
+##### 29.1.?.?.? Position [output.span.stream.position]
 
 	streamsize get_position() override;
 
@@ -854,7 +874,7 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
 
-#### Reading
+##### 29.1.?.?.? Reading [span.stream.read]
 
 	void read(span<byte> buffer) override;
 
@@ -865,7 +885,7 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-#### Writing
+##### 29.1.?.?.? Writing [span.stream.write]
 
 	void write(span<const byte> buffer) override;
 
@@ -876,7 +896,7 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-#### Buffer management
+##### 29.1.?.?.? Buffer management [span.stream.buffer]
 
 	span<byte> get_buffer() const noexcept;
 
@@ -889,9 +909,9 @@ TODO
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
 
-## Memory streams
+### 29.1.? Memory streams [memory.streams]
 
-### Class template `basic_input_memory_stream`
+#### 29.1.?.1 Class template `basic_input_memory_stream` [input.memory.stream]
 
 	template <typename Container>
 	class basic_input_memory_stream final : public input_stream
@@ -923,7 +943,7 @@ TODO
 
 TODO
 
-#### Constructors
+##### 29.1.?.?.? Constructors [input.memory.stream.cons]
 
 	basic_input_memory_stream(format f = {});
 
@@ -952,7 +972,7 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-#### Position
+##### 29.1.?.?.? Position [input.memory.stream.position]
 
 	streamsize get_position() override;
 
@@ -980,7 +1000,7 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
-#### Reading
+##### 29.1.?.?.? Reading [input.memory.stream.read]
 
 	void read(span<byte> buffer) override;
 
@@ -991,7 +1011,7 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-#### Buffer management
+##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
 	const Container& get_buffer() const noexcept &;
 
@@ -1021,7 +1041,7 @@ TODO
 
 *Ensures:* `position_ == 0`.
 
-### Class template `basic_output_memory_stream`
+#### 29.1.?.2 Class template `basic_output_memory_stream` [output.memory.stream]
 
 	template <typename Container>
 	class basic_output_memory_stream final : public output_stream
@@ -1053,7 +1073,7 @@ TODO
 
 TODO
 
-#### Constructors
+##### 29.1.?.?.? Constructors [output.memory.stream.cons]
 
 	basic_output_memory_stream(format f = {});
 
@@ -1082,7 +1102,7 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-#### Position
+##### 29.1.?.?.? Position [output.memory.stream.position]
 
 	streamsize get_position() override;
 
@@ -1110,7 +1130,7 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
-#### Writing
+##### 29.1.?.?.? Writing [output.memory.stream.write]
 
 	void write(span<const byte> buffer) override;
 
@@ -1121,7 +1141,7 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
-#### Buffer management
+##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
 	const Container& get_buffer() const noexcept &;
 
@@ -1151,7 +1171,7 @@ TODO
 
 *Ensures:* `position_ == 0`.
 
-### Class template `basic_memory_stream`
+#### 29.1.?.3 Class template `basic_memory_stream` [memory.stream]
 
 	template <typename Container>
 	class basic_memory_stream final : public stream
@@ -1186,7 +1206,7 @@ TODO
 
 TODO
 
-#### Constructors
+##### 29.1.?.?.? Constructors [memory.stream.cons]
 
 	basic_memory_stream(format f = {});
 
@@ -1215,7 +1235,7 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-#### Position
+##### 29.1.?.?.? Position [memory.stream.position]
 
 	streamsize get_position() override;
 
@@ -1243,7 +1263,7 @@ TODO
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
 
-#### Reading
+##### 29.1.?.?.? Reading [memory.stream.read]
 
 	void read(span<byte> buffer) override;
 
@@ -1254,7 +1274,7 @@ TODO
 *Error conditions:*
 * `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
 
-#### Writing
+##### 29.1.?.?.? Writing [memory.stream.write]
 
 	void write(span<const byte> buffer) override;
 
@@ -1265,7 +1285,7 @@ TODO
 *Error conditions:*
 * `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
 
-#### Buffer management
+##### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
 	const Container& get_buffer() const noexcept &;
 
@@ -1295,9 +1315,9 @@ TODO
 
 *Ensures:* `position_ == 0`.
 
-## File streams
+### 29.1.? File streams [file.streams???] (naming conflict)
 
-### Class `input_file_stream`
+#### 29.1.?.1 Class `input_file_stream` [input.file.stream]
 
 	class input_file_stream final : public input_stream
 	{
@@ -1319,7 +1339,7 @@ TODO
 
 TODO
 
-### Class `output_file_stream`
+#### 29.1.?.2 Class `output_file_stream` [output.file.stream]
 
 	class output_file_stream final : public output_stream
 	{
@@ -1341,7 +1361,7 @@ TODO
 
 TODO
 
-### Class `file_stream`
+#### 29.1.?.3 Class `file_stream` [file.stream]
 
 	class file_stream final : public stream
 	{
@@ -1365,11 +1385,3 @@ TODO
 	};
 
 TODO
-
-## Open issues
-
-* Concepts vs inheritance
-* `format` as part of the stream class or as separate argument to `io::read` and `io::write`.
-* `std::span` vs `std::ContiguousRange`
-* Error handling
-* `filesystem::path_view`
