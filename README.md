@@ -89,6 +89,8 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 
 ## Tutorial
 
+### Example 1: Writing integer with default format
+
 	#include <io>
 	#include <iostream>
 
@@ -96,7 +98,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 	{
 		unsigned int value = 42;
 		
-		// Create a stream
+		// Create a stream. This stream will write to dynamically allocated memory
 		std::io::output_memory_stream s;
 		
 		// Write the value to the stream
@@ -120,6 +122,8 @@ This is because `CHAR_BIT` is 8, `sizeof(unsigned int)` is 4 and `std::endian::n
 
 We can be more strict and have more portable layout:
 
+### Example 2: Writing integer with specific layout
+
 	#include <cstdint>
 	#include <io>
 	#include <iostream>
@@ -133,7 +137,7 @@ We can be more strict and have more portable layout:
 		// Create a specific binary format
 		std::io::format f{std::endian::big};
 		
-		// Create a stream
+		// Create a stream with our format
 		std::io::output_memory_stream s{f};
 		
 		// Write the value to the stream
@@ -153,7 +157,51 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 
 	0 0 0 42
 
-TODO: More tutorials
+### Example 3: Working with user defined type
+
+	#include <io>
+	
+	struct MyType
+	{
+		int a;
+		float b;
+		
+		void read(std::io::input_stream& stream)
+		{
+			std::io::read(stream, a);
+			std::io::read(stream, b);
+		}
+		
+		void write(std::io::output_stream& stream) const
+		{
+			std::io::write(stream, a);
+			std::io::write(stream, b);
+		}
+	};
+
+### Example 4: Working with 3rd party type
+
+	struct VendorType // Can't modify interface
+	{
+		int a;
+		float b;
+	};
+	
+	// Add "read" and "write" as free functions. They will be picked up
+	// automatically.
+	void read(std::io::input_stream& stream, VendorType& vt)
+	{
+		std::io::read(stream, vt.a);
+		std::io::read(stream, vt.b);
+	}
+	
+	void write(std::io::output_stream& stream, const VendorType& vt)
+	{
+		std::io::write(stream, vt.a);
+		std::io::write(stream, vt.b);
+	}
+
+TODO: More tutorials? More explanations.
 
 ## Implementation experience
 
