@@ -59,7 +59,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `ios_base` and `basic_ios` -> `stream_base`.
   * `basic_istream` -> `input_stream`.
   * `basic_ostream` -> `output_stream`.
-  * `basic_stream` -> `iostream`.
+  * `basic_stream` -> `stream`.
   * `basic_istringstream` -> `basic_input_memory_stream`.
   * `basic_ostringstream` -> `basic_output_memory_stream`.
   * `basic_stringstream` -> `basic_memory_stream`.
@@ -82,7 +82,8 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::seek_direction`.
 * `gcount`, `get`, `getline`, `ignore`, `peek`, `readsome`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
-* `read` and `write` member functions take `std::span`.
+* `read` member function takes `std::span<std::byte>`.
+* `write` member function takes `std::span<const std::byte>`.
 * `flush` member function was removed as there is no buffering.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
