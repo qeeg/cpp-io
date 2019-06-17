@@ -178,6 +178,24 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 			std::io::write(stream, b);
 		}
 	};
+	
+	int main()
+	{
+		MyType t{1, 2.0f};
+		std::io::output_memory_stream s;
+		
+		// std::io::write will automatically pickup "write" member function if it
+		// has a valid signature.
+		std::io::write(s, t);
+		
+		const auto& buffer = s.get_buffer();
+		
+		// Print the buffer
+		for (auto byte : buffer)
+		{
+			std::cout << std::to_integer<int>(byte) << ' ';
+		}
+	}
 
 ### Example 4: Working with 3rd party type
 
@@ -199,6 +217,24 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 	{
 		std::io::write(stream, vt.a);
 		std::io::write(stream, vt.b);
+	}
+	
+	int main()
+	{
+		VendorType vt{1, 2.0f};
+		std::io::output_memory_stream s;
+		
+		// std::io::write will automatically pickup "write" non-member function if
+		// it has a valid signature.
+		std::io::write(s, t);
+		
+		const auto& buffer = s.get_buffer();
+		
+		// Print the buffer
+		for (auto byte : buffer)
+		{
+			std::cout << std::to_integer<int>(byte) << ' ';
+		}
 	}
 
 TODO: More tutorials? More explanations.
