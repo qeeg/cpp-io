@@ -306,7 +306,7 @@ Most of the proposal can be implemented in ISO C++. Low level conversions inside
 
 ## Future work
 
-It is hopeful that `std::io::format` will be used to handle Unicode encoding schemes so Unicode layer will only need to handle encoding forms.
+It is hopeful that `std::io::format` will be used to handle Unicode encoding schemes during file and network IO so Unicode layer will only need to handle encoding forms.
 
 This proposal doesn't rule out more low-level library that exposes complex details of modern operating systems. However, the design of this library has been intentionally kept as simple as possible to be novice-friendly.
 
