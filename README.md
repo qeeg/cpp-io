@@ -255,6 +255,11 @@ There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is d
 	public:
 		RIFFFile(std::io::input_stream& stream)
 		{
+			this->read(stream);
+		}
+		
+		void read(std::io::input_stream& stream)
+		{
 			std::array<std::byte, 4> chunk_id;
 			std::io::read(stream, chunk_id);
 			if (chunk_id == RIFFChunkID)
