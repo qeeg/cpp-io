@@ -56,23 +56,23 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
 * The general inheritance hierarchy of legacy text streams has more or less been preserved, hovewer, the classes have been renamed as follows:
-  * `ios_base` and `basic_ios` -> `stream_base`.
-  * `basic_istream` -> `input_stream`.
-  * `basic_ostream` -> `output_stream`.
-  * `basic_stream` -> `stream`.
-  * `basic_istringstream` -> `basic_input_memory_stream`.
-  * `basic_ostringstream` -> `basic_output_memory_stream`.
-  * `basic_stringstream` -> `basic_memory_stream`.
-  * `basic_ifstream` -> `input_file_stream`.
-  * `basic_ofstream` -> `output_file_stream`.
-  * `basic_fstream` -> `file_stream`.
+  * `std::ios_base` and `std::basic_ios` -> `std::io::stream_base`.
+  * `std::basic_istream` -> `std::io::input_stream`.
+  * `std::basic_ostream` -> `std::io::output_stream`.
+  * `std::basic_stream` -> `std::io::stream`.
+  * `std::basic_istringstream` -> `std::io::basic_input_memory_stream`.
+  * `std::basic_ostringstream` -> `std::io::basic_output_memory_stream`.
+  * `std::basic_stringstream` -> `std::io::basic_memory_stream`.
+  * `std::basic_ifstream` -> `std::io::input_file_stream`.
+  * `std::basic_ofstream` -> `std::io::output_file_stream`.
+  * `std::basic_fstream` -> `std::io::file_stream`.
 * The `streambuf` part of legacy text streams has been dropped.
 * Fixed size streams have been added:
-  * `input_span_stream`.
-  * `output_span_stream`.
-  * `span_stream`.
+  * `std::io::input_span_stream`.
+  * `std::io::output_span_stream`.
+  * `std::io::span_stream`.
 * Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
-* All text formatting flags have been removed. A new class `format` has been introduced for binary format. The separate class is used in order to make the change of stream format atomic.
+* All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The separate class is used in order to make the change of stream format atomic.
 * Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and always start chunks of data with size, any kind of IO error is usually unrecoverable.
 * Since there is no more buffering because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
   * `tellg` and `tellp` -> `get_position`.
@@ -318,11 +318,11 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 ## Open issues
 
 * Concepts vs inheritance
-* `format` as part of the stream class or as separate argument to `io::read` and `io::write`.
+* `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
 * `std::span` vs `std::ContiguousRange`
 * Error handling
-* `filesystem::path_view`
-* Remove `floating_point_format` if P1468 is accepted.
+* `std::filesystem::path_view`
+* Remove `std::io::floating_point_format` if P1468 is accepted.
 
 ## Wording
 
