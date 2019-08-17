@@ -326,7 +326,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 ## Wording
 
-All text is relative to [n4810](https://wg21.link/n4810).
+All text is relative to [n4830](https://wg21.link/n4830).
 
 Move clauses 29.1 - 29.10 into a new clause 29.2 "Legacy text IO".
 
