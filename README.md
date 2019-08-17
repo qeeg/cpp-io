@@ -319,7 +319,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 * Concepts vs inheritance
 * `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
-* `std::span` vs `std::ContiguousRange`
+* `std::span` vs `std::contiguous_range`
 * Error handling
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if P1468 is accepted.
@@ -396,9 +396,9 @@ TODO
 	
 	// IO concepts
 	template <typename T>
-	concept CustomlyReadable = see below;
+	concept customly_readable = see below;
 	template <typename T>
-	concept CustomlyWritable = see below;
+	concept customly_writable = see below;
 	
 	// Customization points
 	inline unspecified read;
@@ -669,10 +669,10 @@ TODO
 
 ### 29.1.? IO concepts [io.concepts]
 
-#### 29.1.?.? Concept `CustomlyReadable` [io.concept.readable]
+#### 29.1.?.? Concept `customly_readable` [io.concept.readable]
 
 	template <typename T>
-	concept CustomlyReadable =
+	concept customly_readable =
 		requires(T object, input_stream& stream)
 		{
 			object.read(stream);
@@ -680,10 +680,10 @@ TODO
 
 TODO
 
-#### 29.1.?.? Concept `CustomlyWritable` [io.concept.writable]
+#### 29.1.?.? Concept `customly_writable` [io.concept.writable]
 
 	template <typename T>
-	concept CustomlyWritable =
+	concept customly_writable =
 		requires(const T object, output_stream& stream)
 		{
 			object.write(stream);
@@ -697,8 +697,8 @@ TODO
 The name `read` denotes a customization point object. The expression `io::read(s, E)` for some subexpression `s` of type `input_stream` and subexpression `E` with type `T` has the following effects:
 
 * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
-* If `T` is `Integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
-* If `T` is `FloatingPoint`, reads `sizeof(T)` bytes from the stream and:
+* If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
+* If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
   * If stream floating point format is native, assigns the bytes to the object representation of `E`.
   * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
 * If `T` is a span of bytes, reads `size(E)` bytes from the stream and assigns them to `E`.
@@ -723,7 +723,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
       * Temporary sets the stream endianness to the endianness of read BOM.
       * For every element `C` in the given span performs `io::read(s, C)`.
       * Reverts stream endianness to the original value.
-* If `T` is `CustomlyReadable`, calls `E.read(s)`.
+* If `T` is `customly_readable`, calls `E.read(s)`.
 
 Example implementation:
 
@@ -731,10 +731,8 @@ Example implementation:
 	{
 
 	void read(input_stream& s, byte& var);
-	void read(input_stream& s, Integral auto& var);
-	template <typename T>
-		requires is_floating_point_v<T>
-	void read(input_stream& s, T& var);
+	void read(input_stream& s, integral auto& var);
+	void read(input_stream& s, floating_point auto& var);
 	template <size_t Extent>
 	void read(input_stream& s, span<byte, Extent> buffer);
 	template <size_t Extent>
@@ -743,7 +741,7 @@ Example implementation:
 	void read(input_stream& s, span<char16_t, Extent> buffer);
 	template <size_t Extent>
 	void read(input_stream& s, span<char32_t, Extent> buffer);
-	void read(input_stream& s, CustomlyReadable auto& var);
+	void read(input_stream& s, customly_readable auto& var);
 	
 	struct read_customization_point
 	{
@@ -760,8 +758,8 @@ Example implementation:
 The name `write` denotes a customization point object. The expression `io::write(s, E)` for some subexpression `s` of type `output_stream` and subexpression `E` with type `T` has the following effects:
 
 * If `T` is `byte`, writes it to the stream.
-* If `T` is `Integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
-* If `T` is `FloatingPoint` and:
+* If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
+* If `T` is `floating_point` and:
   * If stream floating point format is native, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
 * If `T` is a span of bytes, writes `size(E)` bytes to the stream.
@@ -774,7 +772,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is a span of `char32_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
   * If stream BOM handling is `read_write`, writes UTF-32 BOM in the stream endianness to the stream and for every element `C` in the given span performs `io::write(s, C)`.
-* If `T` is `CustomlyWritable`, calls `E.write(s)`.
+* If `T` is `customly_writable`, calls `E.write(s)`.
 
 Example implementation:
 
@@ -783,11 +781,9 @@ Example implementation:
 
 	void write(output_stream& s, byte var);
 	template <typename T>
-		requires Integral<T> || is_enum_v<T>
+		requires integral<T> || is_enum_v<T>
 	void write(output_stream& s, T var);
-	template <typename T>
-		requires is_floating_point_v<T>
-	void write(output_stream& s, T var);
+	void write(output_stream& s, floating_point auto var);
 	template <size_t Extent>
 	void write(output_stream& s, span<const byte, Extent> buffer);
 	template <size_t Extent>
@@ -796,7 +792,7 @@ Example implementation:
 	void write(output_stream& s, span<const char16_t, Extent> buffer);
 	template <size_t Extent>
 	void write(output_stream& s, span<const char32_t, Extent> buffer);
-	void write(output_stream& s, CustomlyWritable const auto& var);
+	void write(output_stream& s, customly_writable const auto& var);
 
 	struct write_customization_point
 	{
