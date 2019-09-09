@@ -299,15 +299,15 @@ TODO: More tutorials? More explanations.
 
 Most of the proposal can be implemented in ISO C++. Low level conversions inside `std::io::read` and `std::io::write` require knowledge of implementation defined format of integers and floating point numbers. File IO requires calling operating system API. The following table provides examples for POSIX and Windows:
 
-| Function        | POSIX   | Windows            |
-| --------------- | ------- | ------------------ |
-| Constructor     | `open`  | `CreateFile`       |
-| Destructor      | `close` | `CloseHandle`      |
-| `get_position`  | `lseek` | `SetFilePointerEx` |
-| `set_position`  | `lseek` | `SetFilePointerEx` |
-| `seek_position` | `lseek` | `SetFilePointerEx` |
-| `read`          | `read`  | `ReadFile`         |
-| `write`         | `write` | `WriteFile`        |
+| Function        | POSIX   | Windows            | UEFI                            |
+| --------------- | ------- | ------------------ | ------------------------------- |
+| Constructor     | `open`  | `CreateFile`       | `EFI_FILE_PROTOCOL.Open`        |
+| Destructor      | `close` | `CloseHandle`      | `EFI_FILE_PROTOCOL.Close`       |
+| `get_position`  | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.GetPosition` |
+| `set_position`  | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.SetPosition` |
+| `seek_position` | `lseek` | `SetFilePointerEx` | No 1:1 mapping                  |
+| `read`          | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
+| `write`         | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
 
 ## Future work
 
