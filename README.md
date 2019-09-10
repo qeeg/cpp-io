@@ -128,7 +128,7 @@ We can be more strict and have more portable layout:
 
 ### Example 2: Writing integer with specific layout
 
-```
+```c++
 #include <cstdint>
 #include <io>
 #include <iostream>
@@ -167,7 +167,7 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 
 ### Example 3: Working with user defined type
 
-```
+```c++
 #include <io>
 
 struct MyType
@@ -209,7 +209,7 @@ int main()
 
 ### Example 4: Working with 3rd party type
 
-```
+```c++
 struct VendorType // Can't modify interface
 {
 	int a;
@@ -253,7 +253,7 @@ int main()
 
 There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
 
-```
+```c++
 #include <io>
 #include <array>
 
@@ -352,7 +352,7 @@ TODO
 
 ### 29.1.? Header `<io>` synopsis [io.syn]
 
-```
+```c++
 namespace std
 {
 namespace io
@@ -447,7 +447,7 @@ class file_stream;
 
 ### 29.1.? Class `format` [io.format]
 
-```
+```c++
 class format final
 {
 public:
@@ -526,7 +526,7 @@ TODO
 
 ### 29.1.? Class `io_error` [ioerr.ioerr]
 
-```
+```c++
 class io_error : public system_error
 {
 public:
@@ -541,7 +541,7 @@ TODO
 
 #### 29.1.?.? Class `stream_base` [stream.base]
 
-```
+```c++
 class stream_base
 {
 public:
@@ -610,7 +610,7 @@ TODO
 
 #### 29.1.?.? Class `input_stream` [input.stream]
 
-```
+```c++
 class input_stream : public virtual stream_base
 {
 public:
@@ -644,7 +644,7 @@ TODO
 
 #### 29.1.?.? Class `output_stream` [output.stream]
 
-```
+```c++
 class output_stream : public virtual stream_base
 {
 public:
@@ -678,7 +678,7 @@ TODO
 
 #### 29.1.?.? Class `stream` [stream]
 
-```
+```c++
 class stream : public input_stream, public output_stream
 {
 public:
@@ -699,7 +699,7 @@ TODO
 
 #### 29.1.?.? Concept `customly_readable` [io.concept.readable]
 
-```
+```c++
 template <typename T>
 concept customly_readable =
 	requires(T object, input_stream& stream)
@@ -712,7 +712,7 @@ TODO
 
 #### 29.1.?.? Concept `customly_writable` [io.concept.writable]
 
-```
+```c++
 template <typename T>
 concept customly_writable =
 	requires(const T object, output_stream& stream)
@@ -759,7 +759,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
 
 Example implementation:
 
-```
+```c++
 namespace customization_points
 {
 
@@ -810,7 +810,7 @@ The name `write` denotes a customization point object. The expression `io::write
 
 Example implementation:
 
-```
+```c++
 namespace customization_points
 {
 
@@ -844,7 +844,7 @@ inline customization_points::write_customization_point write;
 
 #### 29.1.?.1 Class `input_span_stream` [input.span.stream]
 
-```
+```c++
 class input_span_stream final : public input_stream
 {
 public:
@@ -944,7 +944,7 @@ TODO
 
 #### 29.1.?.2 Class `output_span_stream` [output.span.stream]
 
-```
+```c++
 class output_span_stream final : public output_stream
 {
 public:
@@ -1044,7 +1044,7 @@ TODO
 
 #### 29.1.?.3 Class `span_stream` [span.stream]
 
-```
+```c++
 class span_stream final : public stream
 {
 public:
@@ -1160,7 +1160,7 @@ TODO
 
 #### 29.1.?.1 Class template `basic_input_memory_stream` [input.memory.stream]
 
-```
+```c++
 template <typename Container>
 class basic_input_memory_stream final : public input_stream
 {
@@ -1292,7 +1292,7 @@ TODO
 
 #### 29.1.?.2 Class template `basic_output_memory_stream` [output.memory.stream]
 
-```
+```c++
 template <typename Container>
 class basic_output_memory_stream final : public output_stream
 {
@@ -1424,7 +1424,7 @@ TODO
 
 #### 29.1.?.3 Class template `basic_memory_stream` [memory.stream]
 
-```
+```c++
 template <typename Container>
 class basic_memory_stream final : public stream
 {
@@ -1572,7 +1572,7 @@ TODO
 
 #### 29.1.?.1 Class `input_file_stream` [input.file.stream]
 
-```
+```c++
 class input_file_stream final : public input_stream
 {
 public:
@@ -1596,7 +1596,7 @@ TODO
 
 #### 29.1.?.2 Class `output_file_stream` [output.file.stream]
 
-```
+```c++
 class output_file_stream final : public output_stream
 {
 public:
@@ -1620,7 +1620,7 @@ TODO
 
 #### 29.1.?.3 Class `file_stream` [file.stream]
 
-```
+```c++
 class file_stream final : public stream
 {
 public:
