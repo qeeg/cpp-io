@@ -475,52 +475,72 @@ TODO
 
 #### 29.1.?.? Constructor [io.format.cons]
 
-	constexpr format(endian endianness = endian::native,
-		floating_point_format float_format = floating_point_format::native,
-		bom_handling bh = bom_handling::none);
+```c++
+constexpr format(endian endianness = endian::native,
+	floating_point_format float_format = floating_point_format::native,
+	bom_handling bh = bom_handling::none);
+```
 
 *Ensures:* `endianness_ == endianness`, `float_format_ == float_format` and `bom_handling_ == bh`.
 
 #### 29.1.?.? Member functions [io.format.members]
 
-	constexpr endian get_endianness() const noexcept;
+```c++
+constexpr endian get_endianness() const noexcept;
+```
 
 *Returns:* `endianness_`.
 
-	constexpr void set_endianness(endian new_endianness) noexcept;
+```c++
+constexpr void set_endianness(endian new_endianness) noexcept;
+```
 
 *Ensures:* `endianness_ == new_endianness`.
 
-	constexpr floating_point_format get_floating_point_format() const noexcept;
+```c++
+constexpr floating_point_format get_floating_point_format() const noexcept;
+```
 
 *Returns:* `float_format_`.
 
-	constexpr void set_floating_point_format(floating_point_format new_format)
-		noexcept;
+```c++
+constexpr void set_floating_point_format(floating_point_format new_format)
+	noexcept;
+```
 
 *Ensures:* `float_format_ == new_format`.
 
-	constexpr bom_handling get_bom_handling() const noexcept;
+```c++
+constexpr bom_handling get_bom_handling() const noexcept;
+```
 
 *Returns:* `bom_handling_`.
 
-	constexpr void set_bom_handling(bom_handling new_handling) noexcept;
+```c++
+constexpr void set_bom_handling(bom_handling new_handling) noexcept;
+```
 
 *Ensures:* `bom_handling_ == new_handling`.
 
 ### 29.1.? Error handling [io.errors]
 
-	const error_category& category() noexcept;
+```c++
+const error_category& category() noexcept;
+```
 
 *Returns:* A reference to an object of a type derived from class `error_category`. All calls to this function shall return references to the same object.
 
 *Remarks:* The object’s `default_error_condition` and `equivalent` virtual functions shall behave as specified for the class `error_category`. The object’s `name` virtual function shall return a pointer to the string `"io"`.
 
-	error_code make_error_code(io_errc e) noexcept;
+```c++
+error_code make_error_code(io_errc e) noexcept;
+```
 
 *Returns:* `error_code(static_cast<int>(e), io::category())`.
 
-	error_condition make_error_condition(io_errc e) noexcept;
+```c++
+error_condition make_error_condition(io_errc e) noexcept;
+```
 
 *Returns:* `error_condition(static_cast<int>(e), io::category())`.
 
@@ -566,27 +586,37 @@ TODO
 
 ##### 29.1.?.?.? Constructor and destructor [stream.base.cons]
 
-	constexpr stream_base(format f = {});
+```c++
+constexpr stream_base(format f = {});
+```
 
 *Ensures:* `format_ == f`.
 
 ##### 29.1.?.?.? Format [stream.base.format]
 
-	constexpr format get_format() const noexcept;
+```c++
+constexpr format get_format() const noexcept;
+```
 
 *Returns:* `format_`.
 
-	constexpr void set_format(format f) noexcept;
+```c++
+constexpr void set_format(format f) noexcept;
+```
 
 *Ensures:* `format_ == f`.
 
 ##### 29.1.?.?.? Position [stream.base.position]
 
-	virtual streamsize get_position() = 0;
+```c++
+virtual streamsize get_position() = 0;
+```
 
 *Returns:* Current position of the stream.
 
-	virtual void set_position(streamsize position) = 0;
+```c++
+virtual void set_position(streamsize position) = 0;
+```
 
 *Effects:* Sets the position of the stream to the given value.
 
@@ -626,13 +656,17 @@ TODO
 
 ##### 29.1.?.?.? Constructor [input.stream.cons]
 
-	input_stream(format f = {});
+```c++
+input_stream(format f = {});
+```
 
 *Ensures:* `get_format() == f`.
 
 ##### 29.1.?.?.? Reading [input.stream.read]
 
-	virtual void read(span<byte> buffer) = 0;
+```c++
+virtual void read(span<byte> buffer) = 0;
+```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -660,13 +694,17 @@ TODO
 
 ##### 29.1.?.?.? Constructor [output.stream.cons]
 
-	output_stream(format f = {});
+```c++
+output_stream(format f = {});
+```
 
 *Ensures:* `get_format() == f`.
 
 ##### 29.1.?.?.? Writing [output.stream.write]
 
-	virtual void write(span<const byte> buffer) = 0;
+```c++
+virtual void write(span<const byte> buffer) = 0;
+```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -691,7 +729,9 @@ TODO
 
 ##### 29.1.?.?.? Constructor [stream.cons]
 
-	stream(format f = {});
+```c++
+stream(format f = {});
+```
 
 *Ensures:* `get_format() == f`.
 
