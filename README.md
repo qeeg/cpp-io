@@ -596,9 +596,9 @@ TODO
 * `invalid_argument` - if position is negative and the stream doesn't support that.
 * `value_too_large` - if position is greater than the maximum size supported by the stream.
 
-<!-- -->
-
-	virtual void seek_position(streamoff offset, seek_direction direction) = 0;
+```c++
+virtual void seek_position(streamoff offset, seek_direction direction) = 0;
+```
 
 *Effects:* TODO
 
@@ -880,9 +880,9 @@ TODO
 * `empty(buffer_) == true`,
 * `position_ == 0`.
 
-<!-- -->
-
-	input_span_stream(span<const byte> buffer, format f = {});
+```c++
+input_span_stream(span<const byte> buffer, format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -906,9 +906,9 @@ TODO
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
-<!-- -->
-
-	void seek_position(streamoff offset, seek_direction direction) override;
+```c++
+void seek_position(streamoff offset, seek_direction direction) override;
+```
 
 *Effects:* TODO
 
@@ -980,9 +980,9 @@ TODO
 * `empty(buffer_) == true`,
 * `position_ == 0`.
 
-<!-- -->
-
-	output_span_stream(span<byte> buffer, format f = {});
+```c++
+output_span_stream(span<byte> buffer, format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1006,9 +1006,9 @@ TODO
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
-<!-- -->
-
-	void seek_position(streamoff offset, seek_direction direction) override;
+```c++
+void seek_position(streamoff offset, seek_direction direction) override;
+```
 
 *Effects:* TODO
 
@@ -1083,9 +1083,9 @@ TODO
 * `empty(buffer_) == true`,
 * `position_ == 0`.
 
-<!-- -->
-
-	span_stream(span<byte> buffer, format f = {});
+```c++
+span_stream(span<byte> buffer, format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1109,9 +1109,9 @@ TODO
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
-<!-- -->
-
-	void seek_position(streamoff offset, seek_direction direction) override;
+```c++
+void seek_position(streamoff offset, seek_direction direction) override;
+```
 
 *Effects:* TODO
 
@@ -1201,9 +1201,9 @@ TODO
 * `buffer_ == Container{}`,
 * `position_ == 0`.
 
-<!-- -->
-
-	basic_input_memory_stream(const Container& c, format f = {});
+```c++
+basic_input_memory_stream(const Container& c, format f = {});
+```
 
 *Effects:* Initializes `buffer_` with `c`.
 
@@ -1211,9 +1211,9 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-<!-- -->
-
-	basic_input_memory_stream(Container&& c, format f = {});
+```c++
+basic_input_memory_stream(Container&& c, format f = {});
+```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
@@ -1237,9 +1237,9 @@ TODO
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
-<!-- -->
-
-	void seek_position(streamoff offset, seek_direction direction) override;
+```c++
+void seek_position(streamoff offset, seek_direction direction) override;
+```
 
 *Effects:* TODO
 
@@ -1276,9 +1276,9 @@ TODO
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
 
-<!-- -->
-
-	void set_buffer(Container&& new_buffer);
+```c++
+void set_buffer(Container&& new_buffer);
+```
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
@@ -1333,9 +1333,9 @@ TODO
 * `buffer_ == Container{}`,
 * `position_ == 0`.
 
-<!-- -->
-
-	basic_output_memory_stream(const Container& c, format f = {});
+```c++
+basic_output_memory_stream(const Container& c, format f = {});
+```
 
 *Effects:* Initializes `buffer_` with `c`.
 
@@ -1343,9 +1343,9 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-<!-- -->
-
-	basic_output_memory_stream(Container&& c, format f = {});
+```c++
+basic_output_memory_stream(Container&& c, format f = {});
+```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
@@ -1369,9 +1369,9 @@ TODO
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
-<!-- -->
-
-	void seek_position(streamoff offset, seek_direction direction) override;
+```c++
+void seek_position(streamoff offset, seek_direction direction) override;
+```
 
 *Effects:* TODO
 
@@ -1408,9 +1408,9 @@ TODO
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
 
-<!-- -->
-
-	void set_buffer(Container&& new_buffer);
+```c++
+void set_buffer(Container&& new_buffer);
+```
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
@@ -1468,9 +1468,9 @@ TODO
 * `buffer_ == Container{}`,
 * `position_ == 0`.
 
-<!-- -->
-
-	basic_memory_stream(const Container& c, format f = {});
+```c++
+basic_memory_stream(const Container& c, format f = {});
+```
 
 *Effects:* Initializes `buffer_` with `c`.
 
@@ -1478,9 +1478,9 @@ TODO
 * `get_format() == f`,
 * `position_ == 0`.
 
-<!-- -->
-
-	basic_memory_stream(Container&& c, format f = {});
+```c++
+basic_memory_stream(Container&& c, format f = {});
+```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
@@ -1504,9 +1504,9 @@ TODO
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
-<!-- -->
-
-	void seek_position(streamoff offset, seek_direction direction) override;
+```c++
+void seek_position(streamoff offset, seek_direction direction) override;
+```
 
 *Effects:* TODO
 
@@ -1554,9 +1554,9 @@ TODO
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
 
-<!-- -->
-
-	void set_buffer(Container&& new_buffer);
+```c++
+void set_buffer(Container&& new_buffer);
+```
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
