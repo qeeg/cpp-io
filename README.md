@@ -828,7 +828,7 @@ Example implementation:
 		void set_buffer(span<const byte> new_buffer) noexcept;
 	private:
 		span<const byte> buffer_; // exposition only
-		size_t position_; // exposition only
+		ptrdiff_t position_; // exposition only
 	};
 
 TODO
@@ -866,7 +866,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if position is negative.
-* `value_too_large` - if position is greater than `numeric_limits<size_t>::max()`.
+* `value_too_large` - if position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
 <!-- -->
 
@@ -878,7 +878,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+* `value_too_large` - if resulting position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
 ##### 29.1.?.?.? Reading [input.span.stream.read]
 
@@ -926,7 +926,7 @@ TODO
 		void set_buffer(span<byte> new_buffer) noexcept;
 	private:
 		span<byte> buffer_; // exposition only
-		size_t position_; // exposition only
+		ptrdiff_t position_; // exposition only
 	};
 
 TODO
@@ -964,7 +964,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if position is negative.
-* `value_too_large` - if position is greater than `numeric_limits<size_t>::max()`.
+* `value_too_large` - if position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
 <!-- -->
 
@@ -976,7 +976,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+* `value_too_large` - if resulting position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
 ##### 29.1.?.?.? Writing [output.span.stream.write]
 
@@ -1027,7 +1027,7 @@ TODO
 		void set_buffer(span<byte> new_buffer) noexcept;
 	private:
 		span<byte> buffer_; // exposition only
-		size_t position_; // exposition only
+		ptrdiff_t position_; // exposition only
 	};
 
 TODO
@@ -1065,7 +1065,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if position is negative.
-* `value_too_large` - if position is greater than `numeric_limits<size_t>::max()`.
+* `value_too_large` - if position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
 <!-- -->
 
@@ -1077,7 +1077,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position is greater than `numeric_limits<size_t>::max()`.
+* `value_too_large` - if resulting position is greater than `numeric_limits<ptrdiff_t>::max()`.
 
 ##### 29.1.?.?.? Reading [span.stream.read]
 
@@ -1143,7 +1143,7 @@ TODO
 		void reset_buffer() noexcept;
 	private:
 		Container buffer_; // exposition only
-		typename Container::size_type position_; // exposition only
+		typename Container::difference_type position_; // exposition only
 	};
 
 TODO
@@ -1191,7 +1191,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if position is negative.
-* `value_too_large` - if position is greater than `numeric_limits<typename Container::size_type>::max()`.
+* `value_too_large` - if position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
 <!-- -->
 
@@ -1203,7 +1203,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
 ##### 29.1.?.?.? Reading [input.memory.stream.read]
 
@@ -1273,7 +1273,7 @@ TODO
 		void reset_buffer() noexcept;
 	private:
 		Container buffer_; // exposition only
-		typename Container::size_type position_; // exposition only
+		typename Container::difference_type position_; // exposition only
 	};
 
 TODO
@@ -1321,7 +1321,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if position is negative.
-* `value_too_large` - if position is greater than `numeric_limits<typename Container::size_type>::max()`.
+* `value_too_large` - if position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
 <!-- -->
 
@@ -1333,7 +1333,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
 ##### 29.1.?.?.? Writing [output.memory.stream.write]
 
@@ -1406,7 +1406,7 @@ TODO
 		void reset_buffer() noexcept;
 	private:
 		Container buffer_; // exposition only
-		typename Container::size_type position_; // exposition only
+		typename Container::difference_type position_; // exposition only
 	};
 
 TODO
@@ -1454,7 +1454,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if position is negative.
-* `value_too_large` - if position is greater than `numeric_limits<typename Container::size_type>::max()`.
+* `value_too_large` - if position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
 <!-- -->
 
@@ -1466,7 +1466,7 @@ TODO
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::size_type>::max()`.
+* `value_too_large` - if resulting position is greater than `numeric_limits<typename Container::difference_type>::max()`.
 
 ##### 29.1.?.?.? Reading [memory.stream.read]
 
