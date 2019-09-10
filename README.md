@@ -91,32 +91,36 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 
 ### Example 1: Writing integer with default format
 
-	#include <io>
-	#include <iostream>
+```
+#include <io>
+#include <iostream>
 
-	int main()
+int main()
+{
+	unsigned int value = 42;
+
+	// Create a stream. This stream will write to dynamically allocated memory
+	std::io::output_memory_stream s;
+
+	// Write the value to the stream
+	std::io::write(s, value);
+
+	// Get reference to the buffer of the stream
+	const auto& buffer = s.get_buffer();
+
+	// Print the buffer
+	for (auto byte : buffer)
 	{
-		unsigned int value = 42;
-		
-		// Create a stream. This stream will write to dynamically allocated memory
-		std::io::output_memory_stream s;
-		
-		// Write the value to the stream
-		std::io::write(s, value);
-		
-		// Get reference to the buffer of the stream
-		const auto& buffer = s.get_buffer();
-		
-		// Print the buffer
-		for (auto byte : buffer)
-		{
-			std::cout << std::to_integer<int>(byte) << ' ';
-		}
+		std::cout << std::to_integer<int>(byte) << ' ';
 	}
+}
+```
 
 The result is implementation defined. For a random value it would depend on `CHAR_BIT`, `sizeof(unsigned int)` and `std::endian::native`. On AMD64 this will print:
 
-	42 0 0 0
+```
+42 0 0 0
+```
 
 This is because `CHAR_BIT` is 8, `sizeof(unsigned int)` is 4 and `std::endian::native == std::endian::little`.
 
@@ -124,174 +128,184 @@ We can be more strict and have more portable layout:
 
 ### Example 2: Writing integer with specific layout
 
-	#include <cstdint>
-	#include <io>
-	#include <iostream>
-	
-	static_assert(CHAR_BIT == 8)
+```
+#include <cstdint>
+#include <io>
+#include <iostream>
 
-	int main()
+static_assert(CHAR_BIT == 8)
+
+int main()
+{
+	std::uint32_t value = 42;
+
+	// Create a specific binary format
+	std::io::format f{std::endian::big};
+
+	// Create a stream with our format
+	std::io::output_memory_stream s{f};
+
+	// Write the value to the stream
+	std::io::write(s, value);
+
+	// Get reference to the buffer of the stream
+	const auto& buffer = s.get_buffer();
+
+	// Print the buffer
+	for (auto byte : buffer)
 	{
-		std::uint32_t value = 42;
-		
-		// Create a specific binary format
-		std::io::format f{std::endian::big};
-		
-		// Create a stream with our format
-		std::io::output_memory_stream s{f};
-		
-		// Write the value to the stream
-		std::io::write(s, value);
-		
-		// Get reference to the buffer of the stream
-		const auto& buffer = s.get_buffer();
-		
-		// Print the buffer
-		for (auto byte : buffer)
-		{
-			std::cout << std::to_integer<int>(byte) << ' ';
-		}
+		std::cout << std::to_integer<int>(byte) << ' ';
 	}
+}
+```
 
 This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 
-	0 0 0 42
+```
+0 0 0 42
+```
 
 ### Example 3: Working with user defined type
 
-	#include <io>
-	
-	struct MyType
+```
+#include <io>
+
+struct MyType
+{
+	int a;
+	float b;
+
+	void read(std::io::input_stream& stream)
 	{
-		int a;
-		float b;
-		
-		void read(std::io::input_stream& stream)
-		{
-			std::io::read(stream, a);
-			std::io::read(stream, b);
-		}
-		
-		void write(std::io::output_stream& stream) const
-		{
-			std::io::write(stream, a);
-			std::io::write(stream, b);
-		}
-	};
-	
-	int main()
-	{
-		MyType t{1, 2.0f};
-		std::io::output_memory_stream s;
-		
-		// std::io::write will automatically pickup "write" member function if it
-		// has a valid signature.
-		std::io::write(s, t);
-		
-		const auto& buffer = s.get_buffer();
-		
-		// Print the buffer
-		for (auto byte : buffer)
-		{
-			std::cout << std::to_integer<int>(byte) << ' ';
-		}
+		std::io::read(stream, a);
+		std::io::read(stream, b);
 	}
+
+	void write(std::io::output_stream& stream) const
+	{
+		std::io::write(stream, a);
+		std::io::write(stream, b);
+	}
+};
+
+int main()
+{
+	MyType t{1, 2.0f};
+	std::io::output_memory_stream s;
+
+	// std::io::write will automatically pickup "write" member function if it
+	// has a valid signature.
+	std::io::write(s, t);
+
+	const auto& buffer = s.get_buffer();
+
+	// Print the buffer
+	for (auto byte : buffer)
+	{
+		std::cout << std::to_integer<int>(byte) << ' ';
+	}
+}
+```
 
 ### Example 4: Working with 3rd party type
 
-	struct VendorType // Can't modify interface
+```
+struct VendorType // Can't modify interface
+{
+	int a;
+	float b;
+};
+
+// Add "read" and "write" as free functions. They will be picked up
+// automatically.
+void read(std::io::input_stream& stream, VendorType& vt)
+{
+	std::io::read(stream, vt.a);
+	std::io::read(stream, vt.b);
+}
+
+void write(std::io::output_stream& stream, const VendorType& vt)
+{
+	std::io::write(stream, vt.a);
+	std::io::write(stream, vt.b);
+}
+
+int main()
+{
+	VendorType vt{1, 2.0f};
+	std::io::output_memory_stream s;
+
+	// std::io::write will automatically pickup "write" non-member function if
+	// it has a valid signature.
+	std::io::write(s, t);
+
+	const auto& buffer = s.get_buffer();
+
+	// Print the buffer
+	for (auto byte : buffer)
 	{
-		int a;
-		float b;
-	};
-	
-	// Add "read" and "write" as free functions. They will be picked up
-	// automatically.
-	void read(std::io::input_stream& stream, VendorType& vt)
-	{
-		std::io::read(stream, vt.a);
-		std::io::read(stream, vt.b);
+		std::cout << std::to_integer<int>(byte) << ' ';
 	}
-	
-	void write(std::io::output_stream& stream, const VendorType& vt)
-	{
-		std::io::write(stream, vt.a);
-		std::io::write(stream, vt.b);
-	}
-	
-	int main()
-	{
-		VendorType vt{1, 2.0f};
-		std::io::output_memory_stream s;
-		
-		// std::io::write will automatically pickup "write" non-member function if
-		// it has a valid signature.
-		std::io::write(s, t);
-		
-		const auto& buffer = s.get_buffer();
-		
-		// Print the buffer
-		for (auto byte : buffer)
-		{
-			std::cout << std::to_integer<int>(byte) << ' ';
-		}
-	}
+}
+```
 
 ### Example 5: Resource Interchange File Format
 
 There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
 
-	#include <io>
-	#include <array>
+```
+#include <io>
+#include <array>
+
+// C++ doesn't have ASCII literals but we can use UTF-8 literals instead.
+constexpr std::array<std::byte, 4> RIFFChunkID{
+	std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'F'}};
+constexpr std::array<std::byte, 4> RIFXChunkID{
+	std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'X'}};
 	
-	// C++ doesn't have ASCII literals but we can use UTF-8 literals instead.
-	constexpr std::array<std::byte, 4> RIFFChunkID{
-		std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'F'}};
-	constexpr std::array<std::byte, 4> RIFXChunkID{
-		std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'X'}};
-	
-	class RIFFFile
+class RIFFFile
+{
+public:
+	RIFFFile(std::io::input_stream& stream)
 	{
-	public:
-		RIFFFile(std::io::input_stream& stream)
+		this->read(stream);
+	}
+
+	void read(std::io::input_stream& stream)
+	{
+		std::array<std::byte, 4> chunk_id;
+		std::io::read(stream, chunk_id);
+		if (chunk_id == RIFFChunkID)
 		{
-			this->read(stream);
+			// We have little endian file.
+			// Set format to little endian.
+			auto format = stream.get_format();
+			format.set_endianness(std::endian::little);
+			stream.set_format(format);
 		}
-		
-		void read(std::io::input_stream& stream)
+		else if (chunk_id == RIFXChunkID)
 		{
-			std::array<std::byte, 4> chunk_id;
-			std::io::read(stream, chunk_id);
-			if (chunk_id == RIFFChunkID)
-			{
-				// We have little endian file.
-				// Set format to little endian.
-				auto format = stream.get_format();
-				format.set_endianness(std::endian::little);
-				stream.set_format(format);
-			}
-			else if (chunk_id == RIFXChunkID)
-			{
-				// We have big endian file.
-				// Set format to big endian.
-				auto format = stream.get_format();
-				format.set_endianness(std::endian::big);
-				stream.set_format(format);
-			}
-			else
-			{
-				throw /* ... */
-			}
-			// We have set correct endianness based on the 1st chunk id.
-			// The rest of the file will be deserialized correctly according to
-			// our format.
-			std::uint32_t chunk_size;
-			std::io::read(stream, chunk_size);
-			/* ... */
+			// We have big endian file.
+			// Set format to big endian.
+			auto format = stream.get_format();
+			format.set_endianness(std::endian::big);
+			stream.set_format(format);
 		}
-	private:
+		else
+		{
+			throw /* ... */
+		}
+		// We have set correct endianness based on the 1st chunk id.
+		// The rest of the file will be deserialized correctly according to
+		// our format.
+		std::uint32_t chunk_size;
+		std::io::read(stream, chunk_size);
 		/* ... */
 	}
+private:
+	/* ... */
+}
+```
 
 TODO: More tutorials? More explanations.
 
@@ -338,120 +352,124 @@ TODO
 
 ### 29.1.? Header `<io>` synopsis [io.syn]
 
-	namespace std
-	{
-	namespace io
-	{
-	
-	enum class floating_point_format
-	{
-		iec559,
-		native
-	};
+```
+namespace std
+{
+namespace io
+{
 
-	enum class bom_handling
-	{
-		none,
-		read_write
-	};
+enum class floating_point_format
+{
+	iec559,
+	native
+};
 
-	class format;
-	
-	enum class io_errc
-	{
-		invalid_argument = implementation-defined,
-		value_too_large = implementation-defined,
-		reached_end_of_file = implementation-defined,
-		physical_error = implementation-defined,
-		file_too_large = implementation-defined
-	};
-	
-	}
-	
-	template <> struct is_error_code_enum<io::io_errc> : public true_type { };
-	
-	namespace io
-	{
-	
-	// Error handling
-	error_code make_error_code(io_errc e) noexcept;
-	error_condition make_error_condition(io_errc e) noexcept;
-	
-	const error_category& category() noexcept;
-	
-	class io_error;
-	
-	// Stream base classes
-	enum class seek_direction
-	{
-		beginning,
-		current,
-		end
-	};
+enum class bom_handling
+{
+	none,
+	read_write
+};
 
-	class stream_base;
-	class input_stream;
-	class output_stream;
-	class stream;
+class format;
 	
-	// IO concepts
-	template <typename T>
-	concept customly_readable = see below;
-	template <typename T>
-	concept customly_writable = see below;
+enum class io_errc
+{
+	invalid_argument = implementation-defined,
+	value_too_large = implementation-defined,
+	reached_end_of_file = implementation-defined,
+	physical_error = implementation-defined,
+	file_too_large = implementation-defined
+};
+
+}
 	
-	// Customization points
-	inline unspecified read;
-	inline unspecified write;
-	
-	// Span streams
-	class input_span_stream;
-	class output_span_stream;
-	class span_stream;
-	
-	// Memory streams
-	template <typename Container>
-	class basic_input_memory_stream;
-	template <typename Container>
-	class basic_output_memory_stream;
-	template <typename Container>
-	class basic_memory_stream;
-	
-	using input_memory_stream = basic_input_memory_stream<vector<byte>>;
-	using output_memory_stream = basic_output_memory_stream<vector<byte>>;
-	using memory_stream = basic_memory_stream<vector<byte>>;
-	
-	// File streams
-	class input_file_stream;
-	class output_file_stream;
-	class file_stream;
-	
-	}
-	}
+template <> struct is_error_code_enum<io::io_errc> : public true_type { };
+
+namespace io
+{
+
+// Error handling
+error_code make_error_code(io_errc e) noexcept;
+error_condition make_error_condition(io_errc e) noexcept;
+
+const error_category& category() noexcept;
+
+class io_error;
+
+// Stream base classes
+enum class seek_direction
+{
+	beginning,
+	current,
+	end
+};
+
+class stream_base;
+class input_stream;
+class output_stream;
+class stream;
+
+// IO concepts
+template <typename T>
+concept customly_readable = see below;
+template <typename T>
+concept customly_writable = see below;
+
+// Customization points
+inline unspecified read;
+inline unspecified write;
+
+// Span streams
+class input_span_stream;
+class output_span_stream;
+class span_stream;
+
+// Memory streams
+template <typename Container>
+class basic_input_memory_stream;
+template <typename Container>
+class basic_output_memory_stream;
+template <typename Container>
+class basic_memory_stream;
+
+using input_memory_stream = basic_input_memory_stream<vector<byte>>;
+using output_memory_stream = basic_output_memory_stream<vector<byte>>;
+using memory_stream = basic_memory_stream<vector<byte>>;
+
+// File streams
+class input_file_stream;
+class output_file_stream;
+class file_stream;
+
+}
+}
+```
 
 ### 29.1.? Class `format` [io.format]
 
-	class format final
-	{
-	public:
-		// Constructor
-		constexpr format(endian endianness = endian::native,
-			floating_point_format float_format = floating_point_format::native,
-			bom_handling bh = bom_handling::none);
-		
-		// Member functions
-		constexpr endian get_endianness() const noexcept;
-		constexpr void set_endianness(endian new_endianness) noexcept;
-		constexpr floating_point_format get_floating_point_format() const noexcept;
-		constexpr void set_floating_point_format(floating_point_format new_format)
-			noexcept;
-		constexpr bom_handling get_bom_handling() const noexcept;
-		constexpr void set_bom_handling(bom_handling new_handling) noexcept;
-	private:
-		endian endianness_; // exposition only
-		floating_point_format float_format_; // exposition only
-		bom_handling bom_handling_; // exposition only
-	};
+```
+class format final
+{
+public:
+	// Constructor
+	constexpr format(endian endianness = endian::native,
+		floating_point_format float_format = floating_point_format::native,
+		bom_handling bh = bom_handling::none);
+
+	// Member functions
+	constexpr endian get_endianness() const noexcept;
+	constexpr void set_endianness(endian new_endianness) noexcept;
+	constexpr floating_point_format get_floating_point_format() const noexcept;
+	constexpr void set_floating_point_format(floating_point_format new_format)
+		noexcept;
+	constexpr bom_handling get_bom_handling() const noexcept;
+	constexpr void set_bom_handling(bom_handling new_handling) noexcept;
+private:
+	endian endianness_; // exposition only
+	floating_point_format float_format_; // exposition only
+	bom_handling bom_handling_; // exposition only
+};
+```
 
 TODO
 
@@ -508,12 +526,14 @@ TODO
 
 ### 29.1.? Class `io_error` [ioerr.ioerr]
 
-	class io_error : public system_error
-	{
-	public:
-		io_error(const string& message, error_code ec);
-		io_error(const char* message, error_code ec);
-	};
+```
+class io_error : public system_error
+{
+public:
+	io_error(const string& message, error_code ec);
+	io_error(const char* message, error_code ec);
+};
+```
 
 TODO
 
@@ -521,24 +541,26 @@ TODO
 
 #### 29.1.?.? Class `stream_base` [stream.base]
 
-	class stream_base
-	{
-	public:
-		// Constructor and destructor
-		constexpr stream_base(format f = {});
-		virtual ~stream_base() = default;
-		
-		// Format
-		constexpr format get_format() const noexcept;
-		constexpr void set_format(format f) noexcept;
-		
-		// Position
-		virtual streamsize get_position() = 0;
-		virtual void set_position(streamsize position) = 0;
-		virtual void seek_position(streamoff offset, seek_direction direction) = 0;
-	private:
-		format format_; // exposition only
-	};
+```
+class stream_base
+{
+public:
+	// Constructor and destructor
+	constexpr stream_base(format f = {});
+	virtual ~stream_base() = default;
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
+
+	// Position
+	virtual streamsize get_position() = 0;
+	virtual void set_position(streamsize position) = 0;
+	virtual void seek_position(streamoff offset, seek_direction direction) = 0;
+private:
+	format format_; // exposition only
+};
+```
 
 TODO
 
@@ -588,15 +610,17 @@ TODO
 
 #### 29.1.?.? Class `input_stream` [input.stream]
 
-	class input_stream : public virtual stream_base
-	{
-	public:
-		// Constructor
-		input_stream(format f = {});
-		
-		// Reading
-		virtual void read(span<byte> buffer) = 0;
-	};
+```
+class input_stream : public virtual stream_base
+{
+public:
+	// Constructor
+	input_stream(format f = {});
+
+	// Reading
+	virtual void read(span<byte> buffer) = 0;
+};
+```
 
 TODO
 
@@ -620,15 +644,17 @@ TODO
 
 #### 29.1.?.? Class `output_stream` [output.stream]
 
-	class output_stream : public virtual stream_base
-	{
-	public:
-		// Constructor
-		output_stream(format f = {});
-		
-		// Writing
-		virtual void write(span<const byte> buffer) = 0;
-	};
+```
+class output_stream : public virtual stream_base
+{
+public:
+	// Constructor
+	output_stream(format f = {});
+
+	// Writing
+	virtual void write(span<const byte> buffer) = 0;
+};
+```
 
 TODO
 
@@ -652,12 +678,14 @@ TODO
 
 #### 29.1.?.? Class `stream` [stream]
 
-	class stream : public input_stream, public output_stream
-	{
-	public:
-		// Constructor
-		stream(format f = {});
-	};
+```
+class stream : public input_stream, public output_stream
+{
+public:
+	// Constructor
+	stream(format f = {});
+};
+```
 
 TODO
 
@@ -671,23 +699,27 @@ TODO
 
 #### 29.1.?.? Concept `customly_readable` [io.concept.readable]
 
-	template <typename T>
-	concept customly_readable =
-		requires(T object, input_stream& stream)
-		{
-			object.read(stream);
-		};
+```
+template <typename T>
+concept customly_readable =
+	requires(T object, input_stream& stream)
+	{
+		object.read(stream);
+	};
+```
 
 TODO
 
 #### 29.1.?.? Concept `customly_writable` [io.concept.writable]
 
-	template <typename T>
-	concept customly_writable =
-		requires(const T object, output_stream& stream)
-		{
-			object.write(stream);
-		};
+```
+template <typename T>
+concept customly_writable =
+	requires(const T object, output_stream& stream)
+	{
+		object.write(stream);
+	};
+```
 
 TODO
 
@@ -727,31 +759,33 @@ The name `read` denotes a customization point object. The expression `io::read(s
 
 Example implementation:
 
-	namespace customization_points
-	{
+```
+namespace customization_points
+{
 
-	void read(input_stream& s, byte& var);
-	void read(input_stream& s, integral auto& var);
-	void read(input_stream& s, floating_point auto& var);
-	template <size_t Extent>
-	void read(input_stream& s, span<byte, Extent> buffer);
-	template <size_t Extent>
-	void read(input_stream& s, span<char8_t, Extent> buffer);
-	template <size_t Extent>
-	void read(input_stream& s, span<char16_t, Extent> buffer);
-	template <size_t Extent>
-	void read(input_stream& s, span<char32_t, Extent> buffer);
-	void read(input_stream& s, customly_readable auto& var);
-	
-	struct read_customization_point
-	{
-		template <typename T>
-		void operator()(input_stream& s, T& var);
-	};
-	
-	}
-	
-	inline customization_points::read_customization_point read;
+void read(input_stream& s, byte& var);
+void read(input_stream& s, integral auto& var);
+void read(input_stream& s, floating_point auto& var);
+template <size_t Extent>
+void read(input_stream& s, span<byte, Extent> buffer);
+template <size_t Extent>
+void read(input_stream& s, span<char8_t, Extent> buffer);
+template <size_t Extent>
+void read(input_stream& s, span<char16_t, Extent> buffer);
+template <size_t Extent>
+void read(input_stream& s, span<char32_t, Extent> buffer);
+void read(input_stream& s, customly_readable auto& var);
+
+struct read_customization_point
+{
+	template <typename T>
+	void operator()(input_stream& s, T& var);
+};
+
+}
+
+inline customization_points::read_customization_point read;
+```
 
 #### 29.1.?.2 `io::write` [io.write]
 
@@ -776,60 +810,64 @@ The name `write` denotes a customization point object. The expression `io::write
 
 Example implementation:
 
-	namespace customization_points
-	{
+```
+namespace customization_points
+{
 
-	void write(output_stream& s, byte var);
+void write(output_stream& s, byte var);
+template <typename T>
+	requires integral<T> || is_enum_v<T>
+void write(output_stream& s, T var);
+void write(output_stream& s, floating_point auto var);
+template <size_t Extent>
+void write(output_stream& s, span<const byte, Extent> buffer);
+template <size_t Extent>
+void write(output_stream& s, span<const char8_t, Extent> buffer);
+template <size_t Extent>
+void write(output_stream& s, span<const char16_t, Extent> buffer);
+template <size_t Extent>
+void write(output_stream& s, span<const char32_t, Extent> buffer);
+void write(output_stream& s, customly_writable const auto& var);
+
+struct write_customization_point
+{
 	template <typename T>
-		requires integral<T> || is_enum_v<T>
-	void write(output_stream& s, T var);
-	void write(output_stream& s, floating_point auto var);
-	template <size_t Extent>
-	void write(output_stream& s, span<const byte, Extent> buffer);
-	template <size_t Extent>
-	void write(output_stream& s, span<const char8_t, Extent> buffer);
-	template <size_t Extent>
-	void write(output_stream& s, span<const char16_t, Extent> buffer);
-	template <size_t Extent>
-	void write(output_stream& s, span<const char32_t, Extent> buffer);
-	void write(output_stream& s, customly_writable const auto& var);
+	void operator()(output_stream& s, const T& var);
+};
 
-	struct write_customization_point
-	{
-		template <typename T>
-		void operator()(output_stream& s, const T& var);
-	};
+}
 
-	}
-
-	inline customization_points::write_customization_point write;
+inline customization_points::write_customization_point write;
+```
 
 ### 29.1.? Span streams [span.streams]
 
 #### 29.1.?.1 Class `input_span_stream` [input.span.stream]
 
-	class input_span_stream final : public input_stream
-	{
-	public:
-		// Constructors
-		input_span_stream(format f = {});
-		input_span_stream(span<const byte> buffer, format f = {});
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Reading
-		void read(span<byte> buffer) override;
-		
-		// Buffer management
-		span<const byte> get_buffer() const noexcept;
-		void set_buffer(span<const byte> new_buffer) noexcept;
-	private:
-		span<const byte> buffer_; // exposition only
-		ptrdiff_t position_; // exposition only
-	};
+```
+class input_span_stream final : public input_stream
+{
+public:
+	// Constructors
+	input_span_stream(format f = {});
+	input_span_stream(span<const byte> buffer, format f = {});
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Reading
+	void read(span<byte> buffer) override;
+
+	// Buffer management
+	span<const byte> get_buffer() const noexcept;
+	void set_buffer(span<const byte> new_buffer) noexcept;
+private:
+	span<const byte> buffer_; // exposition only
+	ptrdiff_t position_; // exposition only
+};
+```
 
 TODO
 
@@ -906,28 +944,30 @@ TODO
 
 #### 29.1.?.2 Class `output_span_stream` [output.span.stream]
 
-	class output_span_stream final : public output_stream
-	{
-	public:
-		// Constructors
-		output_span_stream(format f = {});
-		output_span_stream(span<byte> buffer, format f = {});
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Writing
-		void write(span<const byte> buffer) override;
-		
-		// Buffer management
-		span<byte> get_buffer() const noexcept;
-		void set_buffer(span<byte> new_buffer) noexcept;
-	private:
-		span<byte> buffer_; // exposition only
-		ptrdiff_t position_; // exposition only
-	};
+```
+class output_span_stream final : public output_stream
+{
+public:
+	// Constructors
+	output_span_stream(format f = {});
+	output_span_stream(span<byte> buffer, format f = {});
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Writing
+	void write(span<const byte> buffer) override;
+
+	// Buffer management
+	span<byte> get_buffer() const noexcept;
+	void set_buffer(span<byte> new_buffer) noexcept;
+private:
+	span<byte> buffer_; // exposition only
+	ptrdiff_t position_; // exposition only
+};
+```
 
 TODO
 
@@ -1004,31 +1044,33 @@ TODO
 
 #### 29.1.?.3 Class `span_stream` [span.stream]
 
-	class span_stream final : public stream
-	{
-	public:
-		// Constructors
-		span_stream(format f = {});
-		span_stream(span<byte> buffer, format f = {});
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Reading
-		void read(span<byte> buffer) override;
-		
-		// Writing
-		void write(span<const byte> buffer) override;
-		
-		// Buffer management
-		span<byte> get_buffer() const noexcept;
-		void set_buffer(span<byte> new_buffer) noexcept;
-	private:
-		span<byte> buffer_; // exposition only
-		ptrdiff_t position_; // exposition only
-	};
+```
+class span_stream final : public stream
+{
+public:
+	// Constructors
+	span_stream(format f = {});
+	span_stream(span<byte> buffer, format f = {});
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Reading
+	void read(span<byte> buffer) override;
+
+	// Writing
+	void write(span<const byte> buffer) override;
+
+	// Buffer management
+	span<byte> get_buffer() const noexcept;
+	void set_buffer(span<byte> new_buffer) noexcept;
+private:
+	span<byte> buffer_; // exposition only
+	ptrdiff_t position_; // exposition only
+};
+```
 
 TODO
 
@@ -1118,33 +1160,35 @@ TODO
 
 #### 29.1.?.1 Class template `basic_input_memory_stream` [input.memory.stream]
 
-	template <typename Container>
-	class basic_input_memory_stream final : public input_stream
-	{
-	public:
-		// Constructors
-		basic_input_memory_stream(format f = {});
-		basic_input_memory_stream(const Container& c, format f = {});
-		basic_input_memory_stream(Container&& c, format f = {});
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Reading
-		void read(span<byte> buffer) override;
-		
-		// Buffer management
-		const Container& get_buffer() const noexcept &;
-		Container get_buffer() noexcept &&;
-		void set_buffer(const Container& new_buffer);
-		void set_buffer(Container&& new_buffer);
-		void reset_buffer() noexcept;
-	private:
-		Container buffer_; // exposition only
-		typename Container::difference_type position_; // exposition only
-	};
+```
+template <typename Container>
+class basic_input_memory_stream final : public input_stream
+{
+public:
+	// Constructors
+	basic_input_memory_stream(format f = {});
+	basic_input_memory_stream(const Container& c, format f = {});
+	basic_input_memory_stream(Container&& c, format f = {});
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Reading
+	void read(span<byte> buffer) override;
+
+	// Buffer management
+	const Container& get_buffer() const noexcept &;
+	Container get_buffer() noexcept &&;
+	void set_buffer(const Container& new_buffer);
+	void set_buffer(Container&& new_buffer);
+	void reset_buffer() noexcept;
+private:
+	Container buffer_; // exposition only
+	typename Container::difference_type position_; // exposition only
+};
+```
 
 TODO
 
@@ -1248,33 +1292,35 @@ TODO
 
 #### 29.1.?.2 Class template `basic_output_memory_stream` [output.memory.stream]
 
-	template <typename Container>
-	class basic_output_memory_stream final : public output_stream
-	{
-	public:
-		// Constructors
-		basic_output_memory_stream(format f = {});
-		basic_output_memory_stream(const Container& c, format f = {});
-		basic_output_memory_stream(Container&& c, format f = {});
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Writing
-		void write(span<const byte> buffer) override;
-		
-		// Buffer management
-		const Container& get_buffer() const noexcept &;
-		Container get_buffer() noexcept &&;
-		void set_buffer(const Container& new_buffer);
-		void set_buffer(Container&& new_buffer);
-		void reset_buffer() noexcept;
-	private:
-		Container buffer_; // exposition only
-		typename Container::difference_type position_; // exposition only
-	};
+```
+template <typename Container>
+class basic_output_memory_stream final : public output_stream
+{
+public:
+	// Constructors
+	basic_output_memory_stream(format f = {});
+	basic_output_memory_stream(const Container& c, format f = {});
+	basic_output_memory_stream(Container&& c, format f = {});
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Writing
+	void write(span<const byte> buffer) override;
+
+	// Buffer management
+	const Container& get_buffer() const noexcept &;
+	Container get_buffer() noexcept &&;
+	void set_buffer(const Container& new_buffer);
+	void set_buffer(Container&& new_buffer);
+	void reset_buffer() noexcept;
+private:
+	Container buffer_; // exposition only
+	typename Container::difference_type position_; // exposition only
+};
+```
 
 TODO
 
@@ -1378,36 +1424,38 @@ TODO
 
 #### 29.1.?.3 Class template `basic_memory_stream` [memory.stream]
 
-	template <typename Container>
-	class basic_memory_stream final : public stream
-	{
-	public:
-		// Constructors
-		basic_memory_stream(format f = {});
-		basic_memory_stream(const Container& c, format f = {});
-		basic_memory_stream(Container&& c, format f = {});
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Reading
-		void read(span<byte> buffer) override;
-		
-		// Writing
-		void write(span<const byte> buffer) override;
-		
-		// Buffer management
-		const Container& get_buffer() const noexcept &;
-		Container get_buffer() noexcept &&;
-		void set_buffer(const Container& new_buffer);
-		void set_buffer(Container&& new_buffer);
-		void reset_buffer() noexcept;
-	private:
-		Container buffer_; // exposition only
-		typename Container::difference_type position_; // exposition only
-	};
+```
+template <typename Container>
+class basic_memory_stream final : public stream
+{
+public:
+	// Constructors
+	basic_memory_stream(format f = {});
+	basic_memory_stream(const Container& c, format f = {});
+	basic_memory_stream(Container&& c, format f = {});
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Reading
+	void read(span<byte> buffer) override;
+
+	// Writing
+	void write(span<const byte> buffer) override;
+
+	// Buffer management
+	const Container& get_buffer() const noexcept &;
+	Container get_buffer() noexcept &&;
+	void set_buffer(const Container& new_buffer);
+	void set_buffer(Container&& new_buffer);
+	void reset_buffer() noexcept;
+private:
+	Container buffer_; // exposition only
+	typename Container::difference_type position_; // exposition only
+};
+```
 
 TODO
 
@@ -1524,69 +1572,75 @@ TODO
 
 #### 29.1.?.1 Class `input_file_stream` [input.file.stream]
 
-	class input_file_stream final : public input_stream
-	{
-	public:
-		// Construct/copy/destroy
-		input_file_stream(const filesystem::path& file_name, format f = {});
-		input_file_stream(const input_file_stream&) = delete;
-		~input_file_stream();
-		input_file_stream& operator=(const input_file_stream&) = delete;
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Reading
-		void read(span<byte> buffer) override;
-	};
+```
+class input_file_stream final : public input_stream
+{
+public:
+	// Construct/copy/destroy
+	input_file_stream(const filesystem::path& file_name, format f = {});
+	input_file_stream(const input_file_stream&) = delete;
+	~input_file_stream();
+	input_file_stream& operator=(const input_file_stream&) = delete;
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Reading
+	void read(span<byte> buffer) override;
+};
+```
 
 TODO
 
 #### 29.1.?.2 Class `output_file_stream` [output.file.stream]
 
-	class output_file_stream final : public output_stream
-	{
-	public:
-		// Construct/copy/destroy
-		output_file_stream(const filesystem::path& file_name, format f = {});
-		output_file_stream(const output_file_stream&) = delete;
-		~output_file_stream();
-		output_file_stream& operator=(const output_file_stream&) = delete;
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Writing
-		void write(span<const byte> buffer) override;
-	};
+```
+class output_file_stream final : public output_stream
+{
+public:
+	// Construct/copy/destroy
+	output_file_stream(const filesystem::path& file_name, format f = {});
+	output_file_stream(const output_file_stream&) = delete;
+	~output_file_stream();
+	output_file_stream& operator=(const output_file_stream&) = delete;
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Writing
+	void write(span<const byte> buffer) override;
+};
+```
 
 TODO
 
 #### 29.1.?.3 Class `file_stream` [file.stream]
 
-	class file_stream final : public stream
-	{
-	public:
-		// Construct/copy/destroy
-		file_stream(const filesystem::path& file_name, format f = {});
-		file_stream(const file_stream&) = delete;
-		~file_stream();
-		file_stream& operator=(const file_stream&) = delete;
-		
-		// Position
-		streamsize get_position() override;
-		void set_position(streamsize position) override;
-		void seek_position(streamoff offset, seek_direction direction) override;
-		
-		// Reading
-		void read(span<byte> buffer) override;
-		
-		// Writing
-		void write(span<const byte> buffer) override;
-	};
+```
+class file_stream final : public stream
+{
+public:
+	// Construct/copy/destroy
+	file_stream(const filesystem::path& file_name, format f = {});
+	file_stream(const file_stream&) = delete;
+	~file_stream();
+	file_stream& operator=(const file_stream&) = delete;
+
+	// Position
+	streamsize get_position() override;
+	void set_position(streamsize position) override;
+	void seek_position(streamoff offset, seek_direction direction) override;
+
+	// Reading
+	void read(span<byte> buffer) override;
+
+	// Writing
+	void write(span<const byte> buffer) override;
+};
+```
 
 TODO
