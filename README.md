@@ -91,7 +91,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 
 ### Example 1: Writing integer with default format
 
-```
+```c++
 #include <io>
 #include <iostream>
 
