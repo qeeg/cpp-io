@@ -913,7 +913,9 @@ TODO
 
 ##### 29.1.?.?.? Constructors [input.span.stream.cons]
 
-	input_span_stream(format f = {});
+```c++
+input_span_stream(format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -932,11 +934,15 @@ input_span_stream(span<const byte> buffer, format f = {});
 
 ##### 29.1.?.?.? Position [input.span.stream.position]
 
-	streamsize get_position() override;
+```c++
+streamsize get_position() override;
+```
 
 *Returns:* `position_`.
 
-	void set_position(streamsize position) override;
+```c++
+void set_position(streamsize position) override;
+```
 
 *Ensures:* `position_ == position`.
 
@@ -960,7 +966,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Reading [input.span.stream.read]
 
-	void read(span<byte> buffer) override;
+```c++
+void read(span<byte> buffer) override;
+```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -971,11 +979,15 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
-	span<const byte> get_buffer() const noexcept;
+```c++
+span<const byte> get_buffer() const noexcept;
+```
 
 *Returns:* `buffer_`.
 
-	void set_buffer(span<const byte> new_buffer) noexcept;
+```c++
+void set_buffer(span<const byte> new_buffer) noexcept;
+```
 
 *Ensures:*
 * `data(buffer_) == data(new_buffer)`,
@@ -1013,7 +1025,9 @@ TODO
 
 ##### 29.1.?.?.? Constructors [output.span.stream.cons]
 
-	output_span_stream(format f = {});
+```c++
+output_span_stream(format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1032,11 +1046,15 @@ output_span_stream(span<byte> buffer, format f = {});
 
 ##### 29.1.?.?.? Position [output.span.stream.position]
 
-	streamsize get_position() override;
+```c++
+streamsize get_position() override;
+```
 
 *Returns:* `position_`.
 
-	void set_position(streamsize position) override;
+```c++
+void set_position(streamsize position) override;
+```
 
 *Ensures:* `position_ == position`.
 
@@ -1060,7 +1078,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Writing [output.span.stream.write]
 
-	void write(span<const byte> buffer) override;
+```c++
+void write(span<const byte> buffer) override;
+```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -1071,11 +1091,15 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
-	span<byte> get_buffer() const noexcept;
+```c++
+span<byte> get_buffer() const noexcept;
+```
 
 *Returns:* `buffer_`.
 
-	void set_buffer(span<byte> new_buffer) noexcept;
+```c++
+void set_buffer(span<byte> new_buffer) noexcept;
+```
 
 *Ensures:*
 * `data(buffer_) == data(new_buffer)`,
@@ -1116,7 +1140,9 @@ TODO
 
 ##### 29.1.?.?.? Constructors [span.stream.cons]
 
-	span_stream(format f = {});
+```c++
+span_stream(format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1135,11 +1161,15 @@ span_stream(span<byte> buffer, format f = {});
 
 ##### 29.1.?.?.? Position [output.span.stream.position]
 
-	streamsize get_position() override;
+```c++
+streamsize get_position() override;
+```
 
 *Returns:* `position_`.
 
-	void set_position(streamsize position) override;
+```c++
+void set_position(streamsize position) override;
+```
 
 *Ensures:* `position_ == position`.
 
@@ -1163,7 +1193,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Reading [span.stream.read]
 
-	void read(span<byte> buffer) override;
+```c++
+void read(span<byte> buffer) override;
+```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -1174,7 +1206,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Writing [span.stream.write]
 
-	void write(span<const byte> buffer) override;
+```c++
+void write(span<const byte> buffer) override;
+```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -1185,11 +1219,15 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Buffer management [span.stream.buffer]
 
-	span<byte> get_buffer() const noexcept;
+```c++
+span<byte> get_buffer() const noexcept;
+```
 
 *Returns:* `buffer_`.
 
-	void set_buffer(span<byte> new_buffer) noexcept;
+```c++
+void set_buffer(span<byte> new_buffer) noexcept;
+```
 
 *Ensures:*
 * `data(buffer_) == data(new_buffer)`,
@@ -1234,7 +1272,9 @@ TODO
 
 ##### 29.1.?.?.? Constructors [input.memory.stream.cons]
 
-	basic_input_memory_stream(format f = {});
+```c++
+basic_input_memory_stream(format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1263,11 +1303,15 @@ basic_input_memory_stream(Container&& c, format f = {});
 
 ##### 29.1.?.?.? Position [input.memory.stream.position]
 
-	streamsize get_position() override;
+```c++
+streamsize get_position() override;
+```
 
 *Returns:* `position_`.
 
-	void set_position(streamsize position) override;
+```c++
+void set_position(streamsize position) override;
+```
 
 *Ensures:* `position_ == position`.
 
@@ -1291,7 +1335,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Reading [input.memory.stream.read]
 
-	void read(span<byte> buffer) override;
+```c++
+void read(span<byte> buffer) override;
+```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -1302,15 +1348,21 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
-	const Container& get_buffer() const noexcept &;
+```c++
+const Container& get_buffer() const noexcept &;
+```
 
 *Returns:* `buffer_`.
 
-	Container get_buffer() noexcept &&;
+```c++
+Container get_buffer() noexcept &&;
+```
 
 *Returns:* `move(buffer_)`.
 
-	void set_buffer(const Container& new_buffer);
+```c++
+void set_buffer(const Container& new_buffer);
+```
 
 *Ensures:*
 * `buffer_ == new_buffer`.
@@ -1324,7 +1376,9 @@ void set_buffer(Container&& new_buffer);
 
 *Ensures:* `position_ == 0`.
 
-	void reset_buffer() noexcept;
+```c++
+void reset_buffer() noexcept;
+```
 
 *Effects:* Equivalent to `buffer_.clear()`.
 
@@ -1366,7 +1420,9 @@ TODO
 
 ##### 29.1.?.?.? Constructors [output.memory.stream.cons]
 
-	basic_output_memory_stream(format f = {});
+```c++
+basic_output_memory_stream(format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1395,11 +1451,15 @@ basic_output_memory_stream(Container&& c, format f = {});
 
 ##### 29.1.?.?.? Position [output.memory.stream.position]
 
-	streamsize get_position() override;
+```c++
+streamsize get_position() override;
+```
 
 *Returns:* `position_`.
 
-	void set_position(streamsize position) override;
+```c++
+void set_position(streamsize position) override;
+```
 
 *Ensures:* `position_ == position`.
 
@@ -1423,7 +1483,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Writing [output.memory.stream.write]
 
-	void write(span<const byte> buffer) override;
+```c++
+void write(span<const byte> buffer) override;
+```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -1434,15 +1496,21 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
-	const Container& get_buffer() const noexcept &;
+```c++
+const Container& get_buffer() const noexcept &;
+```
 
 *Returns:* `buffer_`.
 
-	Container get_buffer() noexcept &&;
+```c++
+Container get_buffer() noexcept &&;
+```
 
 *Returns:* `move(buffer_)`.
 
-	void set_buffer(const Container& new_buffer);
+```c++
+void set_buffer(const Container& new_buffer);
+```
 
 *Ensures:*
 * `buffer_ == new_buffer`.
@@ -1456,7 +1524,9 @@ void set_buffer(Container&& new_buffer);
 
 *Ensures:* `position_ == 0`.
 
-	void reset_buffer() noexcept;
+```c++
+void reset_buffer() noexcept;
+```
 
 *Effects:* Equivalent to `buffer_.clear()`.
 
@@ -1501,7 +1571,9 @@ TODO
 
 ##### 29.1.?.?.? Constructors [memory.stream.cons]
 
-	basic_memory_stream(format f = {});
+```c++
+basic_memory_stream(format f = {});
+```
 
 *Ensures:*
 * `get_format() == f`,
@@ -1530,11 +1602,15 @@ basic_memory_stream(Container&& c, format f = {});
 
 ##### 29.1.?.?.? Position [memory.stream.position]
 
-	streamsize get_position() override;
+```c++
+streamsize get_position() override;
+```
 
 *Returns:* `position_`.
 
-	void set_position(streamsize position) override;
+```c++
+void set_position(streamsize position) override;
+```
 
 *Ensures:* `position_ == position`.
 
@@ -1558,7 +1634,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Reading [memory.stream.read]
 
-	void read(span<byte> buffer) override;
+```c++
+void read(span<byte> buffer) override;
+```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
@@ -1569,7 +1647,9 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Writing [memory.stream.write]
 
-	void write(span<const byte> buffer) override;
+```c++
+void write(span<const byte> buffer) override;
+```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
@@ -1580,15 +1660,21 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 ##### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
-	const Container& get_buffer() const noexcept &;
+```c++
+const Container& get_buffer() const noexcept &;
+```
 
 *Returns:* `buffer_`.
 
-	Container get_buffer() noexcept &&;
+```c++
+Container get_buffer() noexcept &&;
+```
 
 *Returns:* `move(buffer_)`.
 
-	void set_buffer(const Container& new_buffer);
+```c++
+void set_buffer(const Container& new_buffer);
+```
 
 *Ensures:*
 * `buffer_ == new_buffer`.
