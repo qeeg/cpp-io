@@ -1705,8 +1705,10 @@ public:
 	// Construct/copy/destroy
 	input_file_stream(const filesystem::path& file_name, format f = {});
 	input_file_stream(const input_file_stream&) = delete;
+	input_file_stream(input_file_stream&&) = delete;
 	~input_file_stream();
 	input_file_stream& operator=(const input_file_stream&) = delete;
+	input_file_stream& operator=(input_file_stream&&) = delete;
 
 	// Position
 	streamsize get_position() override;
@@ -1729,8 +1731,10 @@ public:
 	// Construct/copy/destroy
 	output_file_stream(const filesystem::path& file_name, format f = {});
 	output_file_stream(const output_file_stream&) = delete;
+	output_file_stream(output_file_stream&&) = delete;
 	~output_file_stream();
 	output_file_stream& operator=(const output_file_stream&) = delete;
+	output_file_stream& operator=(output_file_stream&&) = delete;
 
 	// Position
 	streamsize get_position() override;
@@ -1753,8 +1757,10 @@ public:
 	// Construct/copy/destroy
 	file_stream(const filesystem::path& file_name, format f = {});
 	file_stream(const file_stream&) = delete;
+	file_stream(file_stream&&) = delete;
 	~file_stream();
 	file_stream& operator=(const file_stream&) = delete;
+	file_stream& operator=(file_stream&&) = delete;
 
 	// Position
 	streamsize get_position() override;
