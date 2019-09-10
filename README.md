@@ -610,7 +610,7 @@ TODO
 
 	virtual void read(span<byte> buffer) = 0;
 
-*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
@@ -642,7 +642,7 @@ TODO
 
 	virtual void write(span<const byte> buffer) = 0;
 
-*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
@@ -701,7 +701,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
 * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
   * If stream floating point format is native, assigns the bytes to the object representation of `E`.
   * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
-* If `T` is a span of bytes, reads `size(E)` bytes from the stream and assigns them to `E`.
+* If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
 * If `T` is a span of `char8_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
   * If stream BOM handling is `read_write`, reads 3 bytes from the stream and:
@@ -762,7 +762,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is `floating_point` and:
   * If stream floating point format is native, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
-* If `T` is a span of bytes, writes `size(E)` bytes to the stream.
+* If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
 * If `T` is a span of `char8_t` and:
   * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
   * If stream BOM handling is `read_write`, writes UTF-8 BOM to the stream and for every element `C` in the given span performs `io::write(s, C)`.
@@ -884,12 +884,12 @@ TODO
 
 	void read(span<byte> buffer) override;
 
-*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
@@ -982,12 +982,12 @@ TODO
 
 	void write(span<const byte> buffer) override;
 
-*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
+* `file_too_large` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
@@ -1083,23 +1083,23 @@ TODO
 
 	void read(span<byte> buffer) override;
 
-*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Writing [span.stream.write]
 
 	void write(span<const byte> buffer) override;
 
-*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `file_too_large` - if `(position_ + size(buffer)) > size(buffer_)`.
+* `file_too_large` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [span.stream.buffer]
 
@@ -1209,12 +1209,12 @@ TODO
 
 	void read(span<byte> buffer) override;
 
-*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
@@ -1339,12 +1339,12 @@ TODO
 
 	void write(span<const byte> buffer) override;
 
-*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
+* `file_too_large` - if `(position_ + ssize(buffer)) > buffer_.max_size()`.
 
 ##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
@@ -1472,23 +1472,23 @@ TODO
 
 	void read(span<byte> buffer) override;
 
-*Effects:* Reads `size(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `reached_end_of_file` - if `(position_ + size(buffer)) > size(buffer_)`.
+* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Writing [memory.stream.write]
 
 	void write(span<const byte> buffer) override;
 
-*Effects:* Writes `size(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `file_too_large` - if `(position_ + size(buffer)) > buffer_.max_size()`.
+* `file_too_large` - if `(position_ + ssize(buffer)) > buffer_.max_size()`.
 
 ##### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
