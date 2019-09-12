@@ -78,7 +78,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
   * Double argument versions of `seekg` and `seekp` -> `seek_position`.
-* `std::basic_ios::pos_type` has been replaced with `std::streamsize`.
+* `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::seek_direction`.
 * `gcount`, `get`, `getline`, `ignore`, `peek`, `readsome`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
@@ -574,8 +574,8 @@ public:
 	constexpr void set_format(format f) noexcept;
 
 	// Position
-	virtual streamsize get_position() = 0;
-	virtual void set_position(streamsize position) = 0;
+	virtual streamoff get_position() = 0;
+	virtual void set_position(streamoff position) = 0;
 	virtual void seek_position(streamoff offset, seek_direction direction) = 0;
 private:
 	format format_; // exposition only
@@ -609,13 +609,13 @@ constexpr void set_format(format f) noexcept;
 ##### 29.1.?.?.? Position [stream.base.position]
 
 ```c++
-virtual streamsize get_position() = 0;
+virtual streamoff get_position() = 0;
 ```
 
 *Returns:* Current position of the stream.
 
 ```c++
-virtual void set_position(streamsize position) = 0;
+virtual void set_position(streamoff position) = 0;
 ```
 
 *Effects:* Sets the position of the stream to the given value.
@@ -636,7 +636,7 @@ virtual void seek_position(streamoff offset, seek_direction direction) = 0;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or is greater than the maximum size supported by the stream.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
 
 #### 29.1.?.? Class `input_stream` [input.stream]
 
@@ -673,7 +673,7 @@ virtual void read(span<byte> buffer) = 0;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if resulting position cannot be represented as type `streamsize`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff`.
 * `reached_end_of_file` - tried to read past the end of stream.
 * `physical_error` - if physical I/O error has occured.
 
@@ -712,7 +712,7 @@ virtual void write(span<const byte> buffer) = 0;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if resulting position cannot be represented as type `streamsize`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff`.
 * `file_too_large` - tried to write past the maximum size supported by the stream.
 * `physical_error` - if physical I/O error has occured.
 
@@ -895,8 +895,8 @@ public:
 	input_span_stream(span<const byte> buffer, format f = {});
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Reading
@@ -937,13 +937,13 @@ input_span_stream(span<const byte> buffer, format f = {});
 ##### 29.1.?.?.? Position [input.span.stream.position]
 
 ```c++
-streamsize get_position() override;
+streamoff get_position() override;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamsize position) override;
+void set_position(streamoff position) override;
 ```
 
 *Ensures:* `position_ == position`.
@@ -964,7 +964,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or `ptrdiff_t`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
 ##### 29.1.?.?.? Reading [input.span.stream.read]
 
@@ -977,7 +977,7 @@ void read(span<byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
@@ -1008,8 +1008,8 @@ public:
 	output_span_stream(span<byte> buffer, format f = {});
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Writing
@@ -1050,13 +1050,13 @@ output_span_stream(span<byte> buffer, format f = {});
 ##### 29.1.?.?.? Position [output.span.stream.position]
 
 ```c++
-streamsize get_position() override;
+streamoff get_position() override;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamsize position) override;
+void set_position(streamoff position) override;
 ```
 
 *Ensures:* `position_ == position`.
@@ -1077,7 +1077,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or `ptrdiff_t`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
 ##### 29.1.?.?.? Writing [output.span.stream.write]
 
@@ -1090,7 +1090,7 @@ void write(span<const byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `file_too_large` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
@@ -1121,8 +1121,8 @@ public:
 	span_stream(span<byte> buffer, format f = {});
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Reading
@@ -1166,13 +1166,13 @@ span_stream(span<byte> buffer, format f = {});
 ##### 29.1.?.?.? Position [output.span.stream.position]
 
 ```c++
-streamsize get_position() override;
+streamoff get_position() override;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamsize position) override;
+void set_position(streamoff position) override;
 ```
 
 *Ensures:* `position_ == position`.
@@ -1193,7 +1193,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or `ptrdiff_t`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
 ##### 29.1.?.?.? Reading [span.stream.read]
 
@@ -1206,7 +1206,7 @@ void read(span<byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Writing [span.stream.write]
@@ -1220,7 +1220,7 @@ void write(span<const byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `file_too_large` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [span.stream.buffer]
@@ -1255,8 +1255,8 @@ public:
 	basic_input_memory_stream(Container&& c, format f = {});
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Reading
@@ -1310,13 +1310,13 @@ basic_input_memory_stream(Container&& c, format f = {});
 ##### 29.1.?.?.? Position [input.memory.stream.position]
 
 ```c++
-streamsize get_position() override;
+streamoff get_position() override;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamsize position) override;
+void set_position(streamoff position) override;
 ```
 
 *Ensures:* `position_ == position`.
@@ -1337,7 +1337,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or `typename Container::difference_type`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
 ##### 29.1.?.?.? Reading [input.memory.stream.read]
 
@@ -1350,7 +1350,7 @@ void read(span<byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
@@ -1404,8 +1404,8 @@ public:
 	basic_output_memory_stream(Container&& c, format f = {});
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Writing
@@ -1459,13 +1459,13 @@ basic_output_memory_stream(Container&& c, format f = {});
 ##### 29.1.?.?.? Position [output.memory.stream.position]
 
 ```c++
-streamsize get_position() override;
+streamoff get_position() override;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamsize position) override;
+void set_position(streamoff position) override;
 ```
 
 *Ensures:* `position_ == position`.
@@ -1486,7 +1486,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or `typename Container::difference_type`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
 ##### 29.1.?.?.? Writing [output.memory.stream.write]
 
@@ -1499,7 +1499,7 @@ void write(span<const byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `file_too_large` - if `(position_ + ssize(buffer)) > buffer_.max_size()`.
 
 ##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
@@ -1553,8 +1553,8 @@ public:
 	basic_memory_stream(Container&& c, format f = {});
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Reading
@@ -1611,13 +1611,13 @@ basic_memory_stream(Container&& c, format f = {});
 ##### 29.1.?.?.? Position [memory.stream.position]
 
 ```c++
-streamsize get_position() override;
+streamoff get_position() override;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamsize position) override;
+void set_position(streamoff position) override;
 ```
 
 *Ensures:* `position_ == position`.
@@ -1638,7 +1638,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 
 *Error conditions:*
 * `invalid_argument` - if resulting position is negative.
-* `value_too_large` - if resulting position cannot be represented as type `streamsize` or `typename Container::difference_type`.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
 ##### 29.1.?.?.? Reading [memory.stream.read]
 
@@ -1651,7 +1651,7 @@ void read(span<byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
 
 ##### 29.1.?.?.? Writing [memory.stream.write]
@@ -1665,7 +1665,7 @@ void write(span<const byte> buffer) override;
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamsize`.
+* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
 * `file_too_large` - if `(position_ + ssize(buffer)) > buffer_.max_size()`.
 
 ##### 29.1.?.?.? Buffer management [memory.stream.buffer]
@@ -1721,8 +1721,8 @@ public:
 	input_file_stream& operator=(input_file_stream&&) = delete;
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Reading
@@ -1747,8 +1747,8 @@ public:
 	output_file_stream& operator=(output_file_stream&&) = delete;
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Writing
@@ -1773,8 +1773,8 @@ public:
 	file_stream& operator=(file_stream&&) = delete;
 
 	// Position
-	streamsize get_position() override;
-	void set_position(streamsize position) override;
+	streamoff get_position() override;
+	void set_position(streamoff position) override;
 	void seek_position(streamoff offset, seek_direction direction) override;
 
 	// Reading
