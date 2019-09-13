@@ -364,12 +364,6 @@ enum class floating_point_format
 	native
 };
 
-enum class bom_handling
-{
-	none,
-	read_write
-};
-
 class format;
 	
 enum class io_errc
@@ -453,8 +447,7 @@ class format final
 public:
 	// Constructor
 	constexpr format(endian endianness = endian::native,
-		floating_point_format float_format = floating_point_format::native,
-		bom_handling bh = bom_handling::none);
+		floating_point_format float_format = floating_point_format::native);
 
 	// Member functions
 	constexpr endian get_endianness() const noexcept;
@@ -462,12 +455,9 @@ public:
 	constexpr floating_point_format get_floating_point_format() const noexcept;
 	constexpr void set_floating_point_format(floating_point_format new_format)
 		noexcept;
-	constexpr bom_handling get_bom_handling() const noexcept;
-	constexpr void set_bom_handling(bom_handling new_handling) noexcept;
 private:
 	endian endianness_; // exposition only
 	floating_point_format float_format_; // exposition only
-	bom_handling bom_handling_; // exposition only
 };
 ```
 
@@ -477,11 +467,10 @@ TODO
 
 ```c++
 constexpr format(endian endianness = endian::native,
-	floating_point_format float_format = floating_point_format::native,
-	bom_handling bh = bom_handling::none);
+	floating_point_format float_format = floating_point_format::native);
 ```
 
-*Ensures:* `endianness_ == endianness`, `float_format_ == float_format` and `bom_handling_ == bh`.
+*Ensures:* `endianness_ == endianness` and `float_format_ == float_format`.
 
 #### 29.1.?.? Member functions [io.format.members]
 
@@ -509,18 +498,6 @@ constexpr void set_floating_point_format(floating_point_format new_format)
 ```
 
 *Ensures:* `float_format_ == new_format`.
-
-```c++
-constexpr bom_handling get_bom_handling() const noexcept;
-```
-
-*Returns:* `bom_handling_`.
-
-```c++
-constexpr void set_bom_handling(bom_handling new_handling) noexcept;
-```
-
-*Ensures:* `bom_handling_ == new_handling`.
 
 ### 29.1.? Error handling [io.errors]
 
@@ -776,58 +753,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
   * If stream floating point format is native, assigns the bytes to the object representation of `E`.
   * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
 * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
-* If `T` is a span of `char8_t` and:
-  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
-  * If stream BOM handling is `read_write`, reads 3 bytes from the stream and:
-    * If read bytes are not equal to UTF-8 BOM, the position is reverted to the one before the read and an exception is thrown.
-    * Otherwise, for every element `C` in the given span performs `io::read(s, C)`.
-* If `T` is a span of `char16_t`and:
-  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
-  * If stream BOM handling is `read_write`, reads 2 bytes from the stream and:
-    * If read bytes are not equal to UTF-16 BOM, the position is reverted to the one before the read an exception is thrown.
-    * If read bytes are equal to UTF-16 BOM:
-      * Temporary sets the stream endianness to the endianness of read BOM.
-      * For every element `C` in the given span performs `io::read(s, C)`.
-      * Reverts stream endianness to the original value.
-* If `T` is a span of `char32_t` and:
-  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::read(s, C)`.
-  * If stream BOM handling is `read_write`, reads 4 bytes from the stream and:
-    * If read bytes are not equal to UTF-32 BOM, the position is reverted to the one before the read an exception is thrown.
-    * If read bytes are equal to UTF-32 BOM:
-      * Temporary sets the stream endianness to the endianness of read BOM.
-      * For every element `C` in the given span performs `io::read(s, C)`.
-      * Reverts stream endianness to the original value.
 * If `T` is `customly_readable`, calls `E.read(s)`.
-
-Example implementation:
-
-```c++
-namespace customization_points
-{
-
-void read(input_stream& s, byte& var);
-void read(input_stream& s, integral auto& var);
-void read(input_stream& s, floating_point auto& var);
-template <size_t Extent>
-void read(input_stream& s, span<byte, Extent> buffer);
-template <size_t Extent>
-void read(input_stream& s, span<char8_t, Extent> buffer);
-template <size_t Extent>
-void read(input_stream& s, span<char16_t, Extent> buffer);
-template <size_t Extent>
-void read(input_stream& s, span<char32_t, Extent> buffer);
-void read(input_stream& s, customly_readable auto& var);
-
-struct read_customization_point
-{
-	template <typename T>
-	void operator()(input_stream& s, T& var);
-};
-
-}
-
-inline customization_points::read_customization_point read;
-```
 
 #### 29.1.?.2 `io::write` [io.write]
 
@@ -839,48 +765,7 @@ The name `write` denotes a customization point object. The expression `io::write
   * If stream floating point format is native, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
 * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
-* If `T` is a span of `char8_t` and:
-  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
-  * If stream BOM handling is `read_write`, writes UTF-8 BOM to the stream and for every element `C` in the given span performs `io::write(s, C)`.
-* If `T` is a span of `char16_t` and:
-  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
-  * If stream BOM handling is `read_write`, writes UTF-16 BOM in the stream endianness to the stream and for every element `C` in the given span performs `io::write(s, C)`.
-* If `T` is a span of `char32_t` and:
-  * If stream BOM handling is `none`, for every element `C` in the given span performs `io::write(s, C)`.
-  * If stream BOM handling is `read_write`, writes UTF-32 BOM in the stream endianness to the stream and for every element `C` in the given span performs `io::write(s, C)`.
 * If `T` is `customly_writable`, calls `E.write(s)`.
-
-Example implementation:
-
-```c++
-namespace customization_points
-{
-
-void write(output_stream& s, byte var);
-template <typename T>
-	requires integral<T> || is_enum_v<T>
-void write(output_stream& s, T var);
-void write(output_stream& s, floating_point auto var);
-template <size_t Extent>
-void write(output_stream& s, span<const byte, Extent> buffer);
-template <size_t Extent>
-void write(output_stream& s, span<const char8_t, Extent> buffer);
-template <size_t Extent>
-void write(output_stream& s, span<const char16_t, Extent> buffer);
-template <size_t Extent>
-void write(output_stream& s, span<const char32_t, Extent> buffer);
-void write(output_stream& s, customly_writable const auto& var);
-
-struct write_customization_point
-{
-	template <typename T>
-	void operator()(output_stream& s, const T& var);
-};
-
-}
-
-inline customization_points::write_customization_point write;
-```
 
 ### 29.1.? Span streams [span.streams]
 
