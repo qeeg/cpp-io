@@ -748,9 +748,7 @@ TODO
 The name `read` denotes a customization point object. The expression `io::read(s, E)` for some subexpression `s` of type `input_stream` and subexpression `E` with type `T` has the following effects:
 
 * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
-* If `T` is `bool` and:
-  * If stream endianness is `endian::native`, reads `sizeof(bool)` bytes from the stream and assigns the result to object representation of `E`.
-  * Otherwise, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
+* If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
 * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
 * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
   * If stream floating point format is `native`, assigns the bytes to the object representation of `E`.
@@ -763,9 +761,7 @@ The name `read` denotes a customization point object. The expression `io::read(s
 The name `write` denotes a customization point object. The expression `io::write(s, E)` for some subexpression `s` of type `output_stream` and subexpression `E` with type `T` has the following effects:
 
 * If `T` is `byte`, writes it to the stream.
-* If `T` is `bool` and:
-  * If stream endianness is `endian::native`, writes the object representation of `E` to the stream.
-  * Otherwise, writes a single byte whose value is the result of integral promotion of `E` to the stream.
+* If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
 * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
 * If `T` is `floating_point` and:
   * If stream floating point format is `native`, writes the object representation of `E` to the stream.
