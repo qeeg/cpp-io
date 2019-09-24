@@ -55,11 +55,12 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 ## Design decisions
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
-* The general inheritance hierarchy of legacy text streams has more or less been preserved, hovewer, the classes have been renamed as follows:
+* The inheritance heirarchy of legacy text streams has been changed to concepts. Legacy base classes have become the following concepts:
   * `std::ios_base` and `std::basic_ios` -> `std::io::stream_base`.
   * `std::basic_istream` -> `std::io::input_stream`.
   * `std::basic_ostream` -> `std::io::output_stream`.
   * `std::basic_stream` -> `std::io::stream`.
+* Concrete classes have been renamed as follows:
   * `std::basic_istringstream` -> `std::io::basic_input_memory_stream`.
   * `std::basic_ostringstream` -> `std::io::basic_output_memory_stream`.
   * `std::basic_stringstream` -> `std::io::basic_memory_stream`.
@@ -175,13 +176,13 @@ struct MyType
 	int a;
 	float b;
 
-	void read(std::io::input_stream& stream)
+	void read(std::io::input_stream auto& stream)
 	{
 		std::io::read(stream, a);
 		std::io::read(stream, b);
 	}
 
-	void write(std::io::output_stream& stream) const
+	void write(std::io::output_stream auto& stream) const
 	{
 		std::io::write(stream, a);
 		std::io::write(stream, b);
@@ -218,13 +219,13 @@ struct VendorType // Can't modify interface
 
 // Add "read" and "write" as free functions. They will be picked up
 // automatically.
-void read(std::io::input_stream& stream, VendorType& vt)
+void read(std::io::input_stream auto& stream, VendorType& vt)
 {
 	std::io::read(stream, vt.a);
 	std::io::read(stream, vt.b);
 }
 
-void write(std::io::output_stream& stream, const VendorType& vt)
+void write(std::io::output_stream auto& stream, const VendorType& vt)
 {
 	std::io::write(stream, vt.a);
 	std::io::write(stream, vt.b);
@@ -266,12 +267,12 @@ constexpr std::array<std::byte, 4> RIFXChunkID{
 class RIFFFile
 {
 public:
-	RIFFFile(std::io::input_stream& stream)
+	RIFFFile(std::io::input_stream auto& stream)
 	{
 		this->read(stream);
 	}
 
-	void read(std::io::input_stream& stream)
+	void read(std::io::input_stream auto& stream)
 	{
 		std::array<std::byte, 4> chunk_id;
 		std::io::read(stream, chunk_id);
@@ -331,7 +332,6 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 ## Open issues
 
-* Concepts vs inheritance
 * `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
 * `std::span` vs `std::contiguous_range`
 * Error handling
@@ -390,7 +390,6 @@ const error_category& category() noexcept;
 
 class io_error;
 
-// Stream base classes
 enum class seek_direction
 {
 	beginning,
@@ -398,10 +397,15 @@ enum class seek_direction
 	end
 };
 
-class stream_base;
-class input_stream;
-class output_stream;
-class stream;
+// Stream concepts
+template <typename T>
+concept stream_base = see below;
+template <typename T>
+concept input_stream = see below;
+template <typename T>
+concept output_stream = see below;
+template <typename T>
+concept stream = see below;
 
 // IO concepts
 template <typename T>
@@ -534,65 +538,50 @@ public:
 
 TODO
 
-### 29.1.? Stream base classes [streams.base]
+### 29.1.? Stream concepts [stream.concepts]
 
-#### 29.1.?.? Class `stream_base` [stream.base]
+#### 29.1.?.? Concept `stream_base` [stream.concept.base]
 
 ```c++
-class stream_base
-{
-public:
-	// Constructor and destructor
-	constexpr stream_base(format f = {});
-	virtual ~stream_base() = default;
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
-
-	// Position
-	virtual streamoff get_position() = 0;
-	virtual void set_position(streamoff position) = 0;
-	virtual void seek_position(streamoff offset, seek_direction direction) = 0;
-private:
-	format format_; // exposition only
-};
+template <typename T>
+concept stream_base = requires(const T s)
+	{
+		{s.get_format()} -> same_as<format>;
+		{s.get_position()} -> same_as<streamoff>;
+	} && requires(T s, format f, streamoff position, seek_direction direction)
+	{
+		{s.set_format(f)};
+		{s.set_position(position)};
+		{s.seek_position(position, direction)};
+	};
 ```
 
 TODO
 
-##### 29.1.?.?.? Constructor and destructor [stream.base.cons]
-
-```c++
-constexpr stream_base(format f = {});
-```
-
-*Ensures:* `format_ == f`.
-
 ##### 29.1.?.?.? Format [stream.base.format]
 
 ```c++
-constexpr format get_format() const noexcept;
+format get_format() const noexcept;
 ```
 
-*Returns:* `format_`.
+*Returns:* Stream format.
 
 ```c++
-constexpr void set_format(format f) noexcept;
+void set_format(format f) noexcept;
 ```
 
-*Ensures:* `format_ == f`.
+*Effects:* Sets the stream format to `f`.
 
 ##### 29.1.?.?.? Position [stream.base.position]
 
 ```c++
-virtual streamoff get_position() = 0;
+streamoff get_position();
 ```
 
 *Returns:* Current position of the stream.
 
 ```c++
-virtual void set_position(streamoff position) = 0;
+void set_position(streamoff position);
 ```
 
 *Effects:* Sets the position of the stream to the given value.
@@ -604,7 +593,7 @@ virtual void set_position(streamoff position) = 0;
 * `value_too_large` - if position is greater than the maximum size supported by the stream.
 
 ```c++
-virtual void seek_position(streamoff offset, seek_direction direction) = 0;
+void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -615,34 +604,22 @@ virtual void seek_position(streamoff offset, seek_direction direction) = 0;
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
 
-#### 29.1.?.? Class `input_stream` [input.stream]
+#### 29.1.?.? Concept `input_stream` [stream.concept.input]
 
 ```c++
-class input_stream : public virtual stream_base
-{
-public:
-	// Constructor
-	input_stream(format f = {});
-
-	// Reading
-	virtual void read(span<byte> buffer) = 0;
-};
+template <typename T>
+concept input_stream = stream_base<T> && requires(T s, span<byte> buffer)
+	{
+		s.read(buffer);
+	};
 ```
 
 TODO
 
-##### 29.1.?.?.? Constructor [input.stream.cons]
-
-```c++
-input_stream(format f = {});
-```
-
-*Ensures:* `get_format() == f`.
-
 ##### 29.1.?.?.? Reading [input.stream.read]
 
 ```c++
-virtual void read(span<byte> buffer) = 0;
+void read(span<byte> buffer);
 ```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
@@ -654,34 +631,22 @@ virtual void read(span<byte> buffer) = 0;
 * `reached_end_of_file` - tried to read past the end of stream.
 * `physical_error` - if physical I/O error has occured.
 
-#### 29.1.?.? Class `output_stream` [output.stream]
+#### 29.1.?.? Concept `output_stream` [stream.concept.output]
 
 ```c++
-class output_stream : public virtual stream_base
-{
-public:
-	// Constructor
-	output_stream(format f = {});
-
-	// Writing
-	virtual void write(span<const byte> buffer) = 0;
-};
+template <typename T>
+concept output_stream = stream_base<T> && requires(T s, span<const byte> buffer)
+	{
+		s.write(buffer);
+	};
 ```
 
 TODO
 
-##### 29.1.?.?.? Constructor [output.stream.cons]
-
-```c++
-output_stream(format f = {});
-```
-
-*Ensures:* `get_format() == f`.
-
 ##### 29.1.?.?.? Writing [output.stream.write]
 
 ```c++
-virtual void write(span<const byte> buffer) = 0;
+void write(span<const byte> buffer);
 ```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
@@ -693,37 +658,25 @@ virtual void write(span<const byte> buffer) = 0;
 * `file_too_large` - tried to write past the maximum size supported by the stream.
 * `physical_error` - if physical I/O error has occured.
 
-#### 29.1.?.? Class `stream` [stream]
+#### 29.1.?.? Concept `stream` [stream.concept.stream???]
 
 ```c++
-class stream : public input_stream, public output_stream
-{
-public:
-	// Constructor
-	stream(format f = {});
-};
+template <typename T>
+concept stream = input_stream<T> && output_stream<T>;
 ```
 
 TODO
-
-##### 29.1.?.?.? Constructor [stream.cons]
-
-```c++
-stream(format f = {});
-```
-
-*Ensures:* `get_format() == f`.
 
 ### 29.1.? IO concepts [io.concepts]
 
 #### 29.1.?.? Concept `customly_readable` [io.concept.readable]
 
 ```c++
-template <typename T>
+template <typename T, input_stream U>
 concept customly_readable =
-	requires(T object, input_stream& stream)
+	requires(T object, U& s)
 	{
-		object.read(stream);
+		object.read(s);
 	};
 ```
 
@@ -732,11 +685,11 @@ TODO
 #### 29.1.?.? Concept `customly_writable` [io.concept.writable]
 
 ```c++
-template <typename T>
+template <typename T, output_stream U>
 concept customly_writable =
-	requires(const T object, output_stream& stream)
+	requires(const T object, U& s)
 	{
-		object.write(stream);
+		object.write(s);
 	};
 ```
 
@@ -745,8 +698,9 @@ TODO
 ### 29.1.? Customization points [???]
 #### 29.1.?.1 `io::read` [io.read]
 
-The name `read` denotes a customization point object. The expression `io::read(s, E)` for some subexpression `s` of type `input_stream` and subexpression `E` with type `T` has the following effects:
+The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` and subexpression `E` with type `T` has the following effects:
 
+* If `S` is not `input_stream`, `io::read(S, E)` is ill-formed.
 * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
 * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
 * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
@@ -758,8 +712,9 @@ The name `read` denotes a customization point object. The expression `io::read(s
 
 #### 29.1.?.2 `io::write` [io.write]
 
-The name `write` denotes a customization point object. The expression `io::write(s, E)` for some subexpression `s` of type `output_stream` and subexpression `E` with type `T` has the following effects:
+The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` and subexpression `E` with type `T` has the following effects:
 
+* If `S` is not `output_stream`, `io::write(S, E)` is ill-formed.
 * If `T` is `byte`, writes it to the stream.
 * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
 * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
@@ -774,25 +729,30 @@ The name `write` denotes a customization point object. The expression `io::write
 #### 29.1.?.1 Class `input_span_stream` [input.span.stream]
 
 ```c++
-class input_span_stream final : public input_stream
+class input_span_stream final
 {
 public:
 	// Constructors
-	input_span_stream(format f = {});
-	input_span_stream(span<const byte> buffer, format f = {});
+	constexpr input_span_stream(format f = {});
+	constexpr input_span_stream(span<const byte> buffer, format f = {});
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	constexpr streamoff get_position() const noexcept;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer) override;
+	constexpr void read(span<byte> buffer);
 
 	// Buffer management
-	span<const byte> get_buffer() const noexcept;
-	void set_buffer(span<const byte> new_buffer) noexcept;
+	constexpr span<const byte> get_buffer() const noexcept;
+	constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 private:
+	format format_; // exposition only
 	span<const byte> buffer_; // exposition only
 	ptrdiff_t position_; // exposition only
 };
@@ -803,7 +763,7 @@ TODO
 ##### 29.1.?.?.? Constructors [input.span.stream.cons]
 
 ```c++
-input_span_stream(format f = {});
+constexpr input_span_stream(format f = {});
 ```
 
 *Ensures:*
@@ -812,7 +772,7 @@ input_span_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-input_span_stream(span<const byte> buffer, format f = {});
+constexpr input_span_stream(span<const byte> buffer, format f = {});
 ```
 
 *Ensures:*
@@ -821,16 +781,30 @@ input_span_stream(span<const byte> buffer, format f = {});
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
+##### 29.1.?.?.? Format [input.span.stream.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
 ##### 29.1.?.?.? Position [input.span.stream.position]
 
 ```c++
-streamoff get_position() override;
+constexpr streamoff get_position() const noexcept;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamoff position) override;
+constexpr void set_position(streamoff position);
 ```
 
 *Ensures:* `position_ == position`.
@@ -842,7 +816,7 @@ void set_position(streamoff position) override;
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction) override;
+constexpr void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -856,7 +830,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 ##### 29.1.?.?.? Reading [input.span.stream.read]
 
 ```c++
-void read(span<byte> buffer) override;
+constexpr void read(span<byte> buffer);
 ```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
@@ -870,13 +844,13 @@ void read(span<byte> buffer) override;
 ##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
 ```c++
-span<const byte> get_buffer() const noexcept;
+constexpr span<const byte> get_buffer() const noexcept;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-void set_buffer(span<const byte> new_buffer) noexcept;
+constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 ```
 
 *Ensures:*
@@ -887,25 +861,30 @@ void set_buffer(span<const byte> new_buffer) noexcept;
 #### 29.1.?.2 Class `output_span_stream` [output.span.stream]
 
 ```c++
-class output_span_stream final : public output_stream
+class output_span_stream final
 {
 public:
 	// Constructors
-	output_span_stream(format f = {});
-	output_span_stream(span<byte> buffer, format f = {});
+	constexpr output_span_stream(format f = {});
+	constexpr output_span_stream(span<byte> buffer, format f = {});
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	constexpr streamoff get_position() const noexcept;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Writing
-	void write(span<const byte> buffer) override;
+	constexpr void write(span<const byte> buffer);
 
 	// Buffer management
-	span<byte> get_buffer() const noexcept;
-	void set_buffer(span<byte> new_buffer) noexcept;
+	constexpr span<byte> get_buffer() const noexcept;
+	constexpr void set_buffer(span<byte> new_buffer) noexcept;
 private:
+	format format_; // exposition only
 	span<byte> buffer_; // exposition only
 	ptrdiff_t position_; // exposition only
 };
@@ -916,7 +895,7 @@ TODO
 ##### 29.1.?.?.? Constructors [output.span.stream.cons]
 
 ```c++
-output_span_stream(format f = {});
+constexpr output_span_stream(format f = {});
 ```
 
 *Ensures:*
@@ -925,7 +904,7 @@ output_span_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-output_span_stream(span<byte> buffer, format f = {});
+constexpr output_span_stream(span<byte> buffer, format f = {});
 ```
 
 *Ensures:*
@@ -934,16 +913,30 @@ output_span_stream(span<byte> buffer, format f = {});
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
+##### 29.1.?.?.? Format [output.span.stream.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
 ##### 29.1.?.?.? Position [output.span.stream.position]
 
 ```c++
-streamoff get_position() override;
+constexpr streamoff get_position() const noexcept;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamoff position) override;
+constexpr void set_position(streamoff position);
 ```
 
 *Ensures:* `position_ == position`.
@@ -955,7 +948,7 @@ void set_position(streamoff position) override;
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction) override;
+constexpr void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -969,7 +962,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 ##### 29.1.?.?.? Writing [output.span.stream.write]
 
 ```c++
-void write(span<const byte> buffer) override;
+constexpr void write(span<const byte> buffer);
 ```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
@@ -983,13 +976,13 @@ void write(span<const byte> buffer) override;
 ##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
 ```c++
-span<byte> get_buffer() const noexcept;
+constexpr span<byte> get_buffer() const noexcept;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-void set_buffer(span<byte> new_buffer) noexcept;
+constexpr void set_buffer(span<byte> new_buffer) noexcept;
 ```
 
 *Ensures:*
@@ -1000,28 +993,33 @@ void set_buffer(span<byte> new_buffer) noexcept;
 #### 29.1.?.3 Class `span_stream` [span.stream]
 
 ```c++
-class span_stream final : public stream
+class span_stream final
 {
 public:
 	// Constructors
-	span_stream(format f = {});
-	span_stream(span<byte> buffer, format f = {});
+	constexpr span_stream(format f = {});
+	constexpr span_stream(span<byte> buffer, format f = {});
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	constexpr streamoff get_position() const noexcept;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer) override;
+	constexpr void read(span<byte> buffer);
 
 	// Writing
-	void write(span<const byte> buffer) override;
+	constexpr void write(span<const byte> buffer);
 
 	// Buffer management
-	span<byte> get_buffer() const noexcept;
-	void set_buffer(span<byte> new_buffer) noexcept;
+	constexpr span<byte> get_buffer() const noexcept;
+	constexpr void set_buffer(span<byte> new_buffer) noexcept;
 private:
+	format format_; // exposition only
 	span<byte> buffer_; // exposition only
 	ptrdiff_t position_; // exposition only
 };
@@ -1032,7 +1030,7 @@ TODO
 ##### 29.1.?.?.? Constructors [span.stream.cons]
 
 ```c++
-span_stream(format f = {});
+constexpr span_stream(format f = {});
 ```
 
 *Ensures:*
@@ -1041,7 +1039,7 @@ span_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-span_stream(span<byte> buffer, format f = {});
+constexpr span_stream(span<byte> buffer, format f = {});
 ```
 
 *Ensures:*
@@ -1050,16 +1048,30 @@ span_stream(span<byte> buffer, format f = {});
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
+##### 29.1.?.?.? Format [span.stream.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
 ##### 29.1.?.?.? Position [output.span.stream.position]
 
 ```c++
-streamoff get_position() override;
+constexpr streamoff get_position() const noexcept;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamoff position) override;
+constexpr void set_position(streamoff position);
 ```
 
 *Ensures:* `position_ == position`.
@@ -1071,7 +1083,7 @@ void set_position(streamoff position) override;
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction) override;
+constexpr void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -1085,7 +1097,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 ##### 29.1.?.?.? Reading [span.stream.read]
 
 ```c++
-void read(span<byte> buffer) override;
+constexpr void read(span<byte> buffer);
 ```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
@@ -1099,7 +1111,7 @@ void read(span<byte> buffer) override;
 ##### 29.1.?.?.? Writing [span.stream.write]
 
 ```c++
-void write(span<const byte> buffer) override;
+constexpr void write(span<const byte> buffer);
 ```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
@@ -1113,13 +1125,13 @@ void write(span<const byte> buffer) override;
 ##### 29.1.?.?.? Buffer management [span.stream.buffer]
 
 ```c++
-span<byte> get_buffer() const noexcept;
+constexpr span<byte> get_buffer() const noexcept;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-void set_buffer(span<byte> new_buffer) noexcept;
+constexpr void set_buffer(span<byte> new_buffer) noexcept;
 ```
 
 *Ensures:*
@@ -1133,29 +1145,34 @@ void set_buffer(span<byte> new_buffer) noexcept;
 
 ```c++
 template <typename Container>
-class basic_input_memory_stream final : public input_stream
+class basic_input_memory_stream final
 {
 public:
 	// Constructors
-	basic_input_memory_stream(format f = {});
-	basic_input_memory_stream(const Container& c, format f = {});
-	basic_input_memory_stream(Container&& c, format f = {});
+	constexpr basic_input_memory_stream(format f = {});
+	constexpr basic_input_memory_stream(const Container& c, format f = {});
+	constexpr basic_input_memory_stream(Container&& c, format f = {});
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	constexpr streamoff get_position() const noexcept;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer) override;
+	constexpr void read(span<byte> buffer);
 
 	// Buffer management
-	const Container& get_buffer() const noexcept &;
-	Container get_buffer() noexcept &&;
-	void set_buffer(const Container& new_buffer);
-	void set_buffer(Container&& new_buffer);
-	void reset_buffer() noexcept;
+	constexpr const Container& get_buffer() const noexcept &;
+	constexpr Container get_buffer() noexcept &&;
+	constexpr void set_buffer(const Container& new_buffer);
+	constexpr void set_buffer(Container&& new_buffer);
+	constexpr void reset_buffer() noexcept;
 private:
+	format format_; // exposition only
 	Container buffer_; // exposition only
 	typename Container::difference_type position_; // exposition only
 };
@@ -1166,7 +1183,7 @@ TODO
 ##### 29.1.?.?.? Constructors [input.memory.stream.cons]
 
 ```c++
-basic_input_memory_stream(format f = {});
+constexpr basic_input_memory_stream(format f = {});
 ```
 
 *Ensures:*
@@ -1175,7 +1192,7 @@ basic_input_memory_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-basic_input_memory_stream(const Container& c, format f = {});
+constexpr basic_input_memory_stream(const Container& c, format f = {});
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
@@ -1185,7 +1202,7 @@ basic_input_memory_stream(const Container& c, format f = {});
 * `position_ == 0`.
 
 ```c++
-basic_input_memory_stream(Container&& c, format f = {});
+constexpr basic_input_memory_stream(Container&& c, format f = {});
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
@@ -1194,16 +1211,30 @@ basic_input_memory_stream(Container&& c, format f = {});
 * `get_format() == f`,
 * `position_ == 0`.
 
+##### 29.1.?.?.? Format [input.memory.stream.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
 ##### 29.1.?.?.? Position [input.memory.stream.position]
 
 ```c++
-streamoff get_position() override;
+constexpr streamoff get_position() const noexcept;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamoff position) override;
+constexpr void set_position(streamoff position);
 ```
 
 *Ensures:* `position_ == position`.
@@ -1215,7 +1246,7 @@ void set_position(streamoff position) override;
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction) override;
+constexpr void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -1229,7 +1260,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 ##### 29.1.?.?.? Reading [input.memory.stream.read]
 
 ```c++
-void read(span<byte> buffer) override;
+constexpr void read(span<byte> buffer);
 ```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
@@ -1243,19 +1274,19 @@ void read(span<byte> buffer) override;
 ##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
 ```c++
-const Container& get_buffer() const noexcept &;
+constexpr const Container& get_buffer() const noexcept &;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-Container get_buffer() noexcept &&;
+constexpr Container get_buffer() noexcept &&;
 ```
 
 *Returns:* `move(buffer_)`.
 
 ```c++
-void set_buffer(const Container& new_buffer);
+constexpr void set_buffer(const Container& new_buffer);
 ```
 
 *Ensures:*
@@ -1263,7 +1294,7 @@ void set_buffer(const Container& new_buffer);
 * `position_ == 0`.
 
 ```c++
-void set_buffer(Container&& new_buffer);
+constexpr void set_buffer(Container&& new_buffer);
 ```
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
@@ -1271,7 +1302,7 @@ void set_buffer(Container&& new_buffer);
 *Ensures:* `position_ == 0`.
 
 ```c++
-void reset_buffer() noexcept;
+constexpr void reset_buffer() noexcept;
 ```
 
 *Effects:* Equivalent to `buffer_.clear()`.
@@ -1282,29 +1313,34 @@ void reset_buffer() noexcept;
 
 ```c++
 template <typename Container>
-class basic_output_memory_stream final : public output_stream
+class basic_output_memory_stream final
 {
 public:
 	// Constructors
-	basic_output_memory_stream(format f = {});
-	basic_output_memory_stream(const Container& c, format f = {});
-	basic_output_memory_stream(Container&& c, format f = {});
+	constexpr basic_output_memory_stream(format f = {});
+	constexpr basic_output_memory_stream(const Container& c, format f = {});
+	constexpr basic_output_memory_stream(Container&& c, format f = {});
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	constexpr streamoff get_position() const noexcept;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Writing
-	void write(span<const byte> buffer) override;
+	constexpr void write(span<const byte> buffer);
 
 	// Buffer management
-	const Container& get_buffer() const noexcept &;
-	Container get_buffer() noexcept &&;
-	void set_buffer(const Container& new_buffer);
-	void set_buffer(Container&& new_buffer);
-	void reset_buffer() noexcept;
+	constexpr const Container& get_buffer() const noexcept &;
+	constexpr Container get_buffer() noexcept &&;
+	constexpr void set_buffer(const Container& new_buffer);
+	constexpr void set_buffer(Container&& new_buffer);
+	constexpr void reset_buffer() noexcept;
 private:
+	format format_; // exposition only
 	Container buffer_; // exposition only
 	typename Container::difference_type position_; // exposition only
 };
@@ -1315,7 +1351,7 @@ TODO
 ##### 29.1.?.?.? Constructors [output.memory.stream.cons]
 
 ```c++
-basic_output_memory_stream(format f = {});
+constexpr basic_output_memory_stream(format f = {});
 ```
 
 *Ensures:*
@@ -1324,7 +1360,7 @@ basic_output_memory_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-basic_output_memory_stream(const Container& c, format f = {});
+constexpr basic_output_memory_stream(const Container& c, format f = {});
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
@@ -1334,7 +1370,7 @@ basic_output_memory_stream(const Container& c, format f = {});
 * `position_ == 0`.
 
 ```c++
-basic_output_memory_stream(Container&& c, format f = {});
+constexpr basic_output_memory_stream(Container&& c, format f = {});
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
@@ -1343,16 +1379,28 @@ basic_output_memory_stream(Container&& c, format f = {});
 * `get_format() == f`,
 * `position_ == 0`.
 
+##### 29.1.?.?.? Format [output.memory.stream.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
 ##### 29.1.?.?.? Position [output.memory.stream.position]
 
 ```c++
-streamoff get_position() override;
+constexpr streamoff get_position() const noexcept;
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamoff position) override;
+constexpr void set_position(streamoff position);
 ```
 
 *Ensures:* `position_ == position`.
@@ -1364,7 +1412,7 @@ void set_position(streamoff position) override;
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction) override;
+constexpr void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -1378,7 +1426,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 ##### 29.1.?.?.? Writing [output.memory.stream.write]
 
 ```c++
-void write(span<const byte> buffer) override;
+constexpr void write(span<const byte> buffer);
 ```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
@@ -1392,19 +1440,19 @@ void write(span<const byte> buffer) override;
 ##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
 ```c++
-const Container& get_buffer() const noexcept &;
+constexpr const Container& get_buffer() const noexcept &;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-Container get_buffer() noexcept &&;
+constexpr Container get_buffer() noexcept &&;
 ```
 
 *Returns:* `move(buffer_)`.
 
 ```c++
-void set_buffer(const Container& new_buffer);
+constexpr void set_buffer(const Container& new_buffer);
 ```
 
 *Ensures:*
@@ -1412,7 +1460,7 @@ void set_buffer(const Container& new_buffer);
 * `position_ == 0`.
 
 ```c++
-void set_buffer(Container&& new_buffer);
+constexpr void set_buffer(Container&& new_buffer);
 ```
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
@@ -1420,7 +1468,7 @@ void set_buffer(Container&& new_buffer);
 *Ensures:* `position_ == 0`.
 
 ```c++
-void reset_buffer() noexcept;
+constexpr void reset_buffer() noexcept;
 ```
 
 *Effects:* Equivalent to `buffer_.clear()`.
@@ -1431,32 +1479,37 @@ void reset_buffer() noexcept;
 
 ```c++
 template <typename Container>
-class basic_memory_stream final : public stream
+class basic_memory_stream final
 {
 public:
 	// Constructors
-	basic_memory_stream(format f = {});
-	basic_memory_stream(const Container& c, format f = {});
-	basic_memory_stream(Container&& c, format f = {});
+	constexpr basic_memory_stream(format f = {});
+	constexpr basic_memory_stream(const Container& c, format f = {});
+	constexpr basic_memory_stream(Container&& c, format f = {});
+
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	constexpr streamoff get_position() const noexcept;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer) override;
+	constexpr void read(span<byte> buffer);
 
 	// Writing
-	void write(span<const byte> buffer) override;
+	constexpr void write(span<const byte> buffer);
 
 	// Buffer management
-	const Container& get_buffer() const noexcept &;
-	Container get_buffer() noexcept &&;
-	void set_buffer(const Container& new_buffer);
-	void set_buffer(Container&& new_buffer);
-	void reset_buffer() noexcept;
+	constexpr const Container& get_buffer() const noexcept &;
+	constexpr Container get_buffer() noexcept &&;
+	constexpr void set_buffer(const Container& new_buffer);
+	constexpr void set_buffer(Container&& new_buffer);
+	constexpr void reset_buffer() noexcept;
 private:
+	format format_; // exposition only
 	Container buffer_; // exposition only
 	typename Container::difference_type position_; // exposition only
 };
@@ -1467,7 +1520,7 @@ TODO
 ##### 29.1.?.?.? Constructors [memory.stream.cons]
 
 ```c++
-basic_memory_stream(format f = {});
+constexpr basic_memory_stream(format f = {});
 ```
 
 *Ensures:*
@@ -1476,7 +1529,7 @@ basic_memory_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-basic_memory_stream(const Container& c, format f = {});
+constexpr basic_memory_stream(const Container& c, format f = {});
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
@@ -1486,7 +1539,7 @@ basic_memory_stream(const Container& c, format f = {});
 * `position_ == 0`.
 
 ```c++
-basic_memory_stream(Container&& c, format f = {});
+constexpr basic_memory_stream(Container&& c, format f = {});
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
@@ -1495,16 +1548,28 @@ basic_memory_stream(Container&& c, format f = {});
 * `get_format() == f`,
 * `position_ == 0`.
 
+##### 29.1.?.?.? Format [memory.stream.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
 ##### 29.1.?.?.? Position [memory.stream.position]
 
 ```c++
-streamoff get_position() override;
+constexpr streamoff get_position();
 ```
 
 *Returns:* `position_`.
 
 ```c++
-void set_position(streamoff position) override;
+constexpr void set_position(streamoff position);
 ```
 
 *Ensures:* `position_ == position`.
@@ -1516,7 +1581,7 @@ void set_position(streamoff position) override;
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction) override;
+constexpr void seek_position(streamoff offset, seek_direction direction);
 ```
 
 *Effects:* TODO
@@ -1530,7 +1595,7 @@ void seek_position(streamoff offset, seek_direction direction) override;
 ##### 29.1.?.?.? Reading [memory.stream.read]
 
 ```c++
-void read(span<byte> buffer) override;
+constexpr void read(span<byte> buffer);
 ```
 
 *Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
@@ -1544,7 +1609,7 @@ void read(span<byte> buffer) override;
 ##### 29.1.?.?.? Writing [memory.stream.write]
 
 ```c++
-void write(span<const byte> buffer) override;
+constexpr void write(span<const byte> buffer);
 ```
 
 *Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
@@ -1558,19 +1623,19 @@ void write(span<const byte> buffer) override;
 ##### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
 ```c++
-const Container& get_buffer() const noexcept &;
+constexpr const Container& get_buffer() const noexcept &;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-Container get_buffer() noexcept &&;
+constexpr Container get_buffer() noexcept &&;
 ```
 
 *Returns:* `move(buffer_)`.
 
 ```c++
-void set_buffer(const Container& new_buffer);
+constexpr void set_buffer(const Container& new_buffer);
 ```
 
 *Ensures:*
@@ -1578,14 +1643,16 @@ void set_buffer(const Container& new_buffer);
 * `position_ == 0`.
 
 ```c++
-void set_buffer(Container&& new_buffer);
+constexpr void set_buffer(Container&& new_buffer);
 ```
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
 *Ensures:* `position_ == 0`.
 
-	void reset_buffer() noexcept;
+```c++
+constexpr void reset_buffer() noexcept;
+```
 
 *Effects:* Equivalent to `buffer_.clear()`.
 
@@ -1596,7 +1663,7 @@ void set_buffer(Container&& new_buffer);
 #### 29.1.?.1 Class `input_file_stream` [input.file.stream]
 
 ```c++
-class input_file_stream final : public input_stream
+class input_file_stream final
 {
 public:
 	// Construct/copy/destroy
@@ -1607,13 +1674,17 @@ public:
 	input_file_stream& operator=(const input_file_stream&) = delete;
 	input_file_stream& operator=(input_file_stream&&) = delete;
 
+	// Format
+	format get_format() const noexcept;
+	void set_format(format f) noexcept;
+
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	streamoff get_position();
+	void set_position(streamoff position);
+	void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer) override;
+	void read(span<byte> buffer);
 };
 ```
 
@@ -1622,7 +1693,7 @@ TODO
 #### 29.1.?.2 Class `output_file_stream` [output.file.stream]
 
 ```c++
-class output_file_stream final : public output_stream
+class output_file_stream final
 {
 public:
 	// Construct/copy/destroy
@@ -1633,13 +1704,17 @@ public:
 	output_file_stream& operator=(const output_file_stream&) = delete;
 	output_file_stream& operator=(output_file_stream&&) = delete;
 
+	// Format
+	format get_format() const noexcept;
+	void set_format(format f) noexcept;
+
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	streamoff get_position();
+	void set_position(streamoff position);
+	void seek_position(streamoff offset, seek_direction direction);
 
 	// Writing
-	void write(span<const byte> buffer) override;
+	void write(span<const byte> buffer);
 };
 ```
 
@@ -1648,7 +1723,7 @@ TODO
 #### 29.1.?.3 Class `file_stream` [file.stream]
 
 ```c++
-class file_stream final : public stream
+class file_stream final
 {
 public:
 	// Construct/copy/destroy
@@ -1659,16 +1734,20 @@ public:
 	file_stream& operator=(const file_stream&) = delete;
 	file_stream& operator=(file_stream&&) = delete;
 
+	// Format
+	format get_format() const noexcept;
+	void set_format(format f) noexcept;
+
 	// Position
-	streamoff get_position() override;
-	void set_position(streamoff position) override;
-	void seek_position(streamoff offset, seek_direction direction) override;
+	streamoff get_position();
+	void set_position(streamoff position);
+	void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer) override;
+	void read(span<byte> buffer);
 
 	// Writing
-	void write(span<const byte> buffer) override;
+	void write(span<const byte> buffer);
 };
 ```
 
