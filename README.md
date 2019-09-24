@@ -674,7 +674,7 @@ TODO
 ```c++
 template <typename T, typename S>
 concept customly_readable_from =
-	requires input_stream<S> &&
+	input_stream<S> &&
 	requires(T object, S& s)
 	{
 		object.read(s);
@@ -688,7 +688,7 @@ TODO
 ```c++
 template <typename T, typename S>
 concept customly_writable_to =
-	requires output_stream<S> &&
+	output_stream<S> &&
 	requires(const T object, S& s)
 	{
 		object.write(s);
