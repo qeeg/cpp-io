@@ -408,10 +408,10 @@ template <typename T>
 concept stream = see below;
 
 // IO concepts
-template <typename T>
-concept customly_readable = see below;
-template <typename T>
-concept customly_writable = see below;
+template <typename T, typename S>
+concept customly_readable_from = see below;
+template <typename T, typename S>
+concept customly_writable_to = see below;
 
 // Customization points
 inline unspecified read;
@@ -669,12 +669,13 @@ TODO
 
 ### 29.1.? IO concepts [io.concepts]
 
-#### 29.1.?.? Concept `customly_readable` [io.concept.readable]
+#### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
 
 ```c++
-template <typename T, input_stream U>
-concept customly_readable =
-	requires(T object, U& s)
+template <typename T, typename S>
+concept customly_readable_from =
+	requires input_stream<S> &&
+	requires(T object, S& s)
 	{
 		object.read(s);
 	};
@@ -682,12 +683,13 @@ concept customly_readable =
 
 TODO
 
-#### 29.1.?.? Concept `customly_writable` [io.concept.writable]
+#### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
 
 ```c++
-template <typename T, output_stream U>
-concept customly_writable =
-	requires(const T object, U& s)
+template <typename T, typename S>
+concept customly_writable_to =
+	requires output_stream<S> &&
+	requires(const T object, S& s)
 	{
 		object.write(s);
 	};
@@ -698,9 +700,9 @@ TODO
 ### 29.1.? Customization points [???]
 #### 29.1.?.1 `io::read` [io.read]
 
-The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` and subexpression `E` with type `T` has the following effects:
+The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `S` is not `input_stream`, `io::read(S, E)` is ill-formed.
+* If `U` is not `input_stream`, `io::read(S, E)` is ill-formed.
 * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
 * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
 * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
@@ -708,13 +710,13 @@ The name `read` denotes a customization point object. The expression `io::read(S
   * If stream floating point format is `native`, assigns the bytes to the object representation of `E`.
   * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
 * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
-* If `T` is `customly_readable`, calls `E.read(s)`.
+* If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(s)`.
 
 #### 29.1.?.2 `io::write` [io.write]
 
-The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` and subexpression `E` with type `T` has the following effects:
+The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `S` is not `output_stream`, `io::write(S, E)` is ill-formed.
+* If `U` is not `output_stream`, `io::write(S, E)` is ill-formed.
 * If `T` is `byte`, writes it to the stream.
 * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
 * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
@@ -722,7 +724,7 @@ The name `write` denotes a customization point object. The expression `io::write
   * If stream floating point format is `native`, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
 * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
-* If `T` is `customly_writable`, calls `E.write(s)`.
+* If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(s)`.
 
 ### 29.1.? Span streams [span.streams]
 
