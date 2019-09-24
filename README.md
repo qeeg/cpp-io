@@ -1679,7 +1679,7 @@ public:
 	void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position();
+	streamoff get_position() const;
 	void set_position(streamoff position);
 	void seek_position(streamoff offset, seek_direction direction);
 
@@ -1709,7 +1709,7 @@ public:
 	void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position();
+	streamoff get_position() const;
 	void set_position(streamoff position);
 	void seek_position(streamoff offset, seek_direction direction);
 
@@ -1739,7 +1739,7 @@ public:
 	void set_format(format f) noexcept;
 
 	// Position
-	streamoff get_position();
+	streamoff get_position() const;
 	void set_position(streamoff position);
 	void seek_position(streamoff offset, seek_direction direction);
 
