@@ -710,7 +710,7 @@ The name `read` denotes a customization point object. The expression `io::read(S
   * If stream floating point format is `native`, assigns the bytes to the object representation of `E`.
   * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
 * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
-* If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(s)`.
+* If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
 
 #### 29.1.?.2 `io::write` [io.write]
 
@@ -724,7 +724,7 @@ The name `write` denotes a customization point object. The expression `io::write
   * If stream floating point format is `native`, writes the object representation of `E` to the stream.
   * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
 * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
-* If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(s)`.
+* If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
 
 ### 29.1.? Span streams [span.streams]
 
