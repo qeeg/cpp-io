@@ -414,8 +414,8 @@ template <typename T, typename S>
 concept customly_writable_to = see below;
 
 // Customization points
-inline unspecified read;
-inline unspecified write;
+inline constexpr unspecified read = unspecified;
+inline constexpr unspecified write = unspecified;
 
 // Span streams
 class input_span_stream;
