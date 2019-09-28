@@ -18,7 +18,7 @@ This proposal tries to fix all mentioned issues.
 
 ## Prior art
 
-This proposal is based on [ftz Serialization](https://gitlab.com/ftz/serialization) library which was initially written in 2010 targeting C++98 and was gradually updated to C++20. In particular, the following problems were encountered:
+This proposal is based on ftz Serialization library which was initially written in 2010 targeting C++98 and was gradually updated to C++20. In particular, the following problems were encountered:
 
 * There was no portable way to determine the native endianness, especially since sizes of all fundamental types can be 1 and all fixed-width types are optional. This was fixed by `std::endian` in C++20.
 * There was no easy way to convert integers from native representation to two's complement and vice versa. This was fixed by requiring all integers to be two's complement in C++20.
