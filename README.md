@@ -1393,6 +1393,8 @@ constexpr format get_format() const noexcept;
 constexpr void set_format(format f) noexcept;
 ```
 
+*Ensures:* `format_ == f`.
+
 ##### 29.1.?.?.? Position [output.memory.stream.position]
 
 ```c++
@@ -1562,6 +1564,8 @@ constexpr format get_format() const noexcept;
 constexpr void set_format(format f) noexcept;
 ```
 
+*Ensures:* `format_ == f`.
+
 ##### 29.1.?.?.? Position [memory.stream.position]
 
 ```c++
@@ -1687,10 +1691,74 @@ public:
 
 	// Reading
 	void read(span<byte> buffer);
+private:
+	format format_; // exposition only
 };
 ```
 
 TODO
+
+##### 29.1.?.?.? Constructors [input.file.stream.cons]
+
+```c++
+input_file_stream(const filesystem::path& file_name, format f = {});
+```
+
+*Effects:* TODO
+
+*Ensures:* `format_ == f`.
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Format [input.file.stream.format]
+
+```c++
+format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
+##### 29.1.?.?.? Position [input.file.stream.position]
+
+```c++
+streamoff get_position();
+```
+
+*Returns:* Current position of the stream.
+
+*Throws:* TODO
+
+```c++
+void set_position(streamoff position);
+```
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* TODO
+
+```c++
+void seek_position(streamoff offset, seek_direction direction);
+```
+
+*Effects:* TODO
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Reading [input.file.stream.read]
+
+```c++
+void read(span<byte> buffer);
+```
+
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+
+*Throws:* TODO
 
 #### 29.1.?.2 Class `output_file_stream` [output.file.stream]
 
@@ -1717,10 +1785,74 @@ public:
 
 	// Writing
 	void write(span<const byte> buffer);
+private:
+	format format_; // exposition only
 };
 ```
 
 TODO
+
+##### 29.1.?.?.? Constructors [output.file.stream.cons]
+
+```c++
+output_file_stream(const filesystem::path& file_name, format f = {});
+```
+
+*Effects:* TODO
+
+*Ensures:* `format_ == f`.
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Format [output.file.stream.format]
+
+```c++
+format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
+##### 29.1.?.?.? Position [output.file.stream.position]
+
+```c++
+streamoff get_position();
+```
+
+*Returns:* Current position of the stream.
+
+*Throws:* TODO
+
+```c++
+void set_position(streamoff position);
+```
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* TODO
+
+```c++
+void seek_position(streamoff offset, seek_direction direction);
+```
+
+*Effects:* TODO
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Writing [output.file.stream.write]
+
+```c++
+void write(span<const byte> buffer);
+```
+
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+
+*Throws:* TODO
 
 #### 29.1.?.3 Class `file_stream` [file.stream]
 
@@ -1750,7 +1882,81 @@ public:
 
 	// Writing
 	void write(span<const byte> buffer);
+private:
+	format format_; // exposition only
 };
 ```
 
 TODO
+
+##### 29.1.?.?.? Constructors [file.stream.cons]
+
+```c++
+file_stream(const filesystem::path& file_name, format f = {});
+```
+
+*Effects:* TODO
+
+*Ensures:* `format_ == f`.
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Format [file.stream.format]
+
+```c++
+format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
+
+##### 29.1.?.?.? Position [file.stream.position]
+
+```c++
+streamoff get_position();
+```
+
+*Returns:* Current position of the stream.
+
+*Throws:* TODO
+
+```c++
+void set_position(streamoff position);
+```
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* TODO
+
+```c++
+void seek_position(streamoff offset, seek_direction direction);
+```
+
+*Effects:* TODO
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Reading [file.stream.read]
+
+```c++
+void read(span<byte> buffer);
+```
+
+*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Writing [file.stream.write]
+
+```c++
+void write(span<const byte> buffer);
+```
+
+*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+
+*Throws:* TODO
