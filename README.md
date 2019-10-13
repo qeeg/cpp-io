@@ -463,6 +463,10 @@ public:
 	constexpr floating_point_format get_floating_point_format() const noexcept;
 	constexpr void set_floating_point_format(floating_point_format new_format)
 		noexcept;
+	
+	// Equality
+	friend constexpr bool operator==(const format& lhs, const format& rhs)
+		noexcept = default;
 private:
 	endian endianness_; // exposition only
 	floating_point_format float_format_; // exposition only
