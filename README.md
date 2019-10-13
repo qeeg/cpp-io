@@ -82,9 +82,12 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::seek_direction`.
-* `gcount`, `get`, `getline`, `ignore`, `peek`, `readsome`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
-* `read` member function takes `std::span<std::byte>`.
-* `write` member function takes `std::span<const std::byte>`.
+* `get`, `getline`, `ignore`, `peek`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
+* Since it is not always possible to read or write all requested bytes in system call (especially during networking), the interface has been changed accordingly:
+  * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
+  * `std::io::output_stream` requires `write_some` member function that writes one or more bytes from the stream and returns amount of bytes written.
+  * `gcount` became the return value of `read_some`.
+  * `read` and `write` member functions were removed.
 * `flush` member function was removed as there is no buffering.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
@@ -321,8 +324,8 @@ Most of the proposal can be implemented in ISO C++. Low level conversions inside
 | `get_position`  | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.GetPosition` |
 | `set_position`  | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.SetPosition` |
 | `seek_position` | `lseek` | `SetFilePointerEx` | No 1:1 mapping                  |
-| `read`          | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
-| `write`         | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
+| `read_some`     | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
+| `write_some`    | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
 
 ## Future work
 
@@ -371,6 +374,7 @@ enum class io_errc
 	invalid_argument = implementation-defined,
 	value_too_large = implementation-defined,
 	reached_end_of_file = implementation-defined,
+	interrupted = implementation-defined,
 	physical_error = implementation-defined,
 	file_too_large = implementation-defined
 };
@@ -589,6 +593,7 @@ void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative and the stream doesn't support that.
 * `value_too_large` - if position is greater than the maximum size supported by the stream.
 
@@ -601,6 +606,7 @@ void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
 
@@ -610,7 +616,7 @@ void seek_position(streamoff offset, seek_direction direction);
 template <typename T>
 concept input_stream = stream_base<T> && requires(T s, span<byte> buffer)
 	{
-		s.read(buffer);
+		{s.read_some(buffer);} -> same_as<streamsize>;
 	};
 ```
 
@@ -619,16 +625,19 @@ TODO
 ##### 29.1.?.?.? Reading [input.stream.read]
 
 ```c++
-void read(span<byte> buffer);
+streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if resulting position cannot be represented as type `streamoff`.
-* `reached_end_of_file` - tried to read past the end of stream.
+
+* `value_too_large` - if starting position is equal or greater than maximum value supported by the implementation.
+* `interrupted` - if reading was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
 
 #### 29.1.?.? Concept `output_stream` [stream.concept.output]
@@ -637,7 +646,7 @@ void read(span<byte> buffer);
 template <typename T>
 concept output_stream = stream_base<T> && requires(T s, span<const byte> buffer)
 	{
-		s.write(buffer);
+		{s.write_some(buffer);} -> same_as<streamsize>;
 	};
 ```
 
@@ -646,16 +655,19 @@ TODO
 ##### 29.1.?.?.? Writing [output.stream.write]
 
 ```c++
-void write(span<const byte> buffer);
+streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if resulting position cannot be represented as type `streamoff`.
+
 * `file_too_large` - tried to write past the maximum size supported by the stream.
+* `interrupted` - if writing was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
 
 #### 29.1.?.? Concept `stream` [stream.concept.stream???]
@@ -748,7 +760,7 @@ public:
 	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	constexpr void read(span<byte> buffer);
+	constexpr streamsize read_some(span<byte> buffer);
 
 	// Buffer management
 	constexpr span<const byte> get_buffer() const noexcept;
@@ -769,6 +781,7 @@ constexpr input_span_stream(format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `empty(buffer_) == true`,
 * `position_ == 0`.
@@ -778,6 +791,7 @@ constexpr input_span_stream(span<const byte> buffer, format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `data(buffer_) == data(buffer)`,
 * `size(buffer_) == size(buffer)`,
@@ -814,6 +828,7 @@ constexpr void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
@@ -826,22 +841,32 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
 ##### 29.1.?.?.? Reading [input.span.stream.read]
 
 ```c++
-constexpr void read(span<byte> buffer);
+constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+
+* Must be less than or equal to `ssize(buffer)`.
+* Must be representable as `streamsize`.
+* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be representable as `streamoff`.
+
+After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
+
+* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 ##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
@@ -856,6 +881,7 @@ constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 ```
 
 *Ensures:*
+
 * `data(buffer_) == data(new_buffer)`,
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
@@ -880,7 +906,7 @@ public:
 	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Writing
-	constexpr void write(span<const byte> buffer);
+	constexpr streamsize write_some(span<const byte> buffer);
 
 	// Buffer management
 	constexpr span<byte> get_buffer() const noexcept;
@@ -901,6 +927,7 @@ constexpr output_span_stream(format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `empty(buffer_) == true`,
 * `position_ == 0`.
@@ -910,6 +937,7 @@ constexpr output_span_stream(span<byte> buffer, format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `data(buffer_) == data(buffer)`,
 * `size(buffer_) == size(buffer)`,
@@ -946,6 +974,7 @@ constexpr void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
@@ -958,22 +987,32 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
 ##### 29.1.?.?.? Writing [output.span.stream.write]
 
 ```c++
-constexpr void write(span<const byte> buffer);
+constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that is satisfies the following constrains:
+
+* Must be less than or equal to `ssize(buffer)`.
+* Must be representable as `streamsize`.
+* Position after the write must be less than or equal to `ssize(buffer_)`.
+* Position after the write must be representable as `streamoff`.
+
+After that writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `file_too_large` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
+
+* `file_too_large` - if `!empty(buffer) && ((position_ == ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
 ##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
@@ -988,6 +1027,7 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 ```
 
 *Ensures:*
+
 * `data(buffer_) == data(new_buffer)`,
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
@@ -1012,10 +1052,10 @@ public:
 	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	constexpr void read(span<byte> buffer);
+	constexpr streamsize read_some(span<byte> buffer);
 
 	// Writing
-	constexpr void write(span<const byte> buffer);
+	constexpr streamsize write_some(span<const byte> buffer);
 
 	// Buffer management
 	constexpr span<byte> get_buffer() const noexcept;
@@ -1036,6 +1076,7 @@ constexpr span_stream(format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `empty(buffer_) == true`,
 * `position_ == 0`.
@@ -1045,6 +1086,7 @@ constexpr span_stream(span<byte> buffer, format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `data(buffer_) == data(buffer)`,
 * `size(buffer_) == size(buffer)`,
@@ -1081,6 +1123,7 @@ constexpr void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
@@ -1093,36 +1136,55 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
 ##### 29.1.?.?.? Reading [span.stream.read]
 
 ```c++
-constexpr void read(span<byte> buffer);
+constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+
+* Must be less than or equal to `ssize(buffer)`.
+* Must be representable as `streamsize`.
+* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be representable as `streamoff`.
+
+After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
+
+* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 ##### 29.1.?.?.? Writing [span.stream.write]
 
 ```c++
-constexpr void write(span<const byte> buffer);
+constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that is satisfies the following constrains:
+
+* Must be less than or equal to `ssize(buffer)`.
+* Must be representable as `streamsize`.
+* Position after the write must be less than or equal to `ssize(buffer_)`.
+* Position after the write must be representable as `streamoff`.
+
+After that writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `file_too_large` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
+
+* `file_too_large` - if `!empty(buffer) && ((position_ == ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
 ##### 29.1.?.?.? Buffer management [span.stream.buffer]
 
@@ -1137,6 +1199,7 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 ```
 
 *Ensures:*
+
 * `data(buffer_) == data(new_buffer)`,
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
@@ -1165,7 +1228,7 @@ public:
 	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	constexpr void read(span<byte> buffer);
+	constexpr streamsize read_some(span<byte> buffer);
 
 	// Buffer management
 	constexpr const Container& get_buffer() const noexcept &;
@@ -1189,6 +1252,7 @@ constexpr basic_input_memory_stream(format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `buffer_ == Container{}`,
 * `position_ == 0`.
@@ -1200,6 +1264,7 @@ constexpr basic_input_memory_stream(const Container& c, format f = {});
 *Effects:* Initializes `buffer_` with `c`.
 
 *Ensures:*
+
 * `get_format() == f`,
 * `position_ == 0`.
 
@@ -1210,6 +1275,7 @@ constexpr basic_input_memory_stream(Container&& c, format f = {});
 *Effects:* Initializes `buffer_` with `move(c)`.
 
 *Ensures:*
+
 * `get_format() == f`,
 * `position_ == 0`.
 
@@ -1244,6 +1310,7 @@ constexpr void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
@@ -1256,22 +1323,32 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
 ##### 29.1.?.?.? Reading [input.memory.stream.read]
 
 ```c++
-constexpr void read(span<byte> buffer);
+constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+
+* Must be less than or equal to `ssize(buffer)`.
+* Must be representable as `streamsize`.
+* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be representable as `streamoff`.
+
+After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
+
+* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 ##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
@@ -1292,6 +1369,7 @@ constexpr void set_buffer(const Container& new_buffer);
 ```
 
 *Ensures:*
+
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
 
@@ -1333,7 +1411,7 @@ public:
 	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Writing
-	constexpr void write(span<const byte> buffer);
+	constexpr streamsize write_some(span<const byte> buffer);
 
 	// Buffer management
 	constexpr const Container& get_buffer() const noexcept &;
@@ -1357,6 +1435,7 @@ constexpr basic_output_memory_stream(format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `buffer_ == Container{}`,
 * `position_ == 0`.
@@ -1368,6 +1447,7 @@ constexpr basic_output_memory_stream(const Container& c, format f = {});
 *Effects:* Initializes `buffer_` with `c`.
 
 *Ensures:*
+
 * `get_format() == f`,
 * `position_ == 0`.
 
@@ -1378,6 +1458,7 @@ constexpr basic_output_memory_stream(Container&& c, format f = {});
 *Effects:* Initializes `buffer_` with `move(c)`.
 
 *Ensures:*
+
 * `get_format() == f`,
 * `position_ == 0`.
 
@@ -1412,6 +1493,7 @@ constexpr void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
@@ -1424,22 +1506,42 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
 ##### 29.1.?.?.? Writing [output.memory.stream.write]
 
 ```c++
-constexpr void write(span<const byte> buffer);
+constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ssize(buffer_)`:
+
+* Determines the amount of bytes to write so that is satisfies the following constrains:
+  * Must be less than or equal to `ssize(buffer)`.
+  * Must be representable as `streamsize`.
+  * Position after the write must be less than or equal to `ssize(buffer_)`.
+  * Position after the write must be representable as `streamoff`.
+* Writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
+
+Otherwise:
+
+* Determines the amount of bytes to write so that is satisfies the following constrains:
+  * Must be less than or equal to `ssize(buffer)`.
+  * Must be representable as `streamsize`.
+  * Position after the write must be less than or equal to `buffer_.max_size()`.
+  * Position after the write must be representable as `streamoff`.
+* Resizes the stream buffer so it has enough space to write the chosen amount of bytes. If any exceptions are thrown during resizing of stream buffer, they are propagated outside.
+* Writes chosen amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `file_too_large` - if `(position_ + ssize(buffer)) > buffer_.max_size()`.
+
+* `file_too_large` - if `!empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
 ##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
@@ -1460,6 +1562,7 @@ constexpr void set_buffer(const Container& new_buffer);
 ```
 
 *Ensures:*
+
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
 
@@ -1501,10 +1604,10 @@ public:
 	constexpr void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	constexpr void read(span<byte> buffer);
+	constexpr streamsize read_some(span<byte> buffer);
 
 	// Writing
-	constexpr void write(span<const byte> buffer);
+	constexpr streamsize write_some(span<const byte> buffer);
 
 	// Buffer management
 	constexpr const Container& get_buffer() const noexcept &;
@@ -1528,6 +1631,7 @@ constexpr basic_memory_stream(format f = {});
 ```
 
 *Ensures:*
+
 * `get_format() == f`,
 * `buffer_ == Container{}`,
 * `position_ == 0`.
@@ -1539,6 +1643,7 @@ constexpr basic_memory_stream(const Container& c, format f = {});
 *Effects:* Initializes `buffer_` with `c`.
 
 *Ensures:*
+
 * `get_format() == f`,
 * `position_ == 0`.
 
@@ -1549,6 +1654,7 @@ constexpr basic_memory_stream(Container&& c, format f = {});
 *Effects:* Initializes `buffer_` with `move(c)`.
 
 *Ensures:*
+
 * `get_format() == f`,
 * `position_ == 0`.
 
@@ -1583,6 +1689,7 @@ constexpr void set_position(streamoff position);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if position is negative.
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
@@ -1595,36 +1702,65 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
+
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
 ##### 29.1.?.?.? Reading [memory.stream.read]
 
 ```c++
-constexpr void read(span<byte> buffer);
+constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+
+* Must be less than or equal to `ssize(buffer)`.
+* Must be representable as `streamsize`.
+* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be representable as `streamoff`.
+
+After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `reached_end_of_file` - if `(position_ + ssize(buffer)) > ssize(buffer_)`.
+
+* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 ##### 29.1.?.?.? Writing [memory.stream.write]
 
 ```c++
-constexpr void write(span<const byte> buffer);
+constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ssize(buffer_)`:
+
+* Determines the amount of bytes to write so that is satisfies the following constrains:
+  * Must be less than or equal to `ssize(buffer)`.
+  * Must be representable as `streamsize`.
+  * Position after the write must be less than or equal to `ssize(buffer_)`.
+  * Position after the write must be representable as `streamoff`.
+* Writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
+
+Otherwise:
+
+* Determines the amount of bytes to write so that is satisfies the following constrains:
+  * Must be less than or equal to `ssize(buffer)`.
+  * Must be representable as `streamsize`.
+  * Position after the write must be less than or equal to `buffer_.max_size()`.
+  * Position after the write must be representable as `streamoff`.
+* Resizes the stream buffer so it has enough space to write the chosen amount of bytes. If any exceptions are thrown during resizing of stream buffer, they are propagated outside.
+* Writes chosen amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* `io_error` in case of error.
 
 *Error conditions:*
-* `value_too_large` - if `position_ + ssize(buffer)` cannot be represented as type `streamoff`.
-* `file_too_large` - if `(position_ + ssize(buffer)) > buffer_.max_size()`.
+
+* `file_too_large` - if `!empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
 ##### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
@@ -1645,6 +1781,7 @@ constexpr void set_buffer(const Container& new_buffer);
 ```
 
 *Ensures:*
+
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
 
@@ -1690,7 +1827,7 @@ public:
 	void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer);
+	streamsize read_some(span<byte> buffer);
 private:
 	format format_; // exposition only
 };
@@ -1753,10 +1890,12 @@ void seek_position(streamoff offset, seek_direction direction);
 ##### 29.1.?.?.? Reading [input.file.stream.read]
 
 ```c++
-void read(span<byte> buffer);
+streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* TODO
 
@@ -1784,7 +1923,7 @@ public:
 	void seek_position(streamoff offset, seek_direction direction);
 
 	// Writing
-	void write(span<const byte> buffer);
+	streamsize write_some(span<const byte> buffer);
 private:
 	format format_; // exposition only
 };
@@ -1847,10 +1986,12 @@ void seek_position(streamoff offset, seek_direction direction);
 ##### 29.1.?.?.? Writing [output.file.stream.write]
 
 ```c++
-void write(span<const byte> buffer);
+streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* TODO
 
@@ -1878,10 +2019,10 @@ public:
 	void seek_position(streamoff offset, seek_direction direction);
 
 	// Reading
-	void read(span<byte> buffer);
+	streamsize read_some(span<byte> buffer);
 
 	// Writing
-	void write(span<const byte> buffer);
+	streamsize write_some(span<const byte> buffer);
 private:
 	format format_; // exposition only
 };
@@ -1944,19 +2085,23 @@ void seek_position(streamoff offset, seek_direction direction);
 ##### 29.1.?.?.? Reading [file.stream.read]
 
 ```c++
-void read(span<byte> buffer);
+streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* Reads `ssize(buffer)` bytes from the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+
+*Returns:* The amount of bytes read.
 
 *Throws:* TODO
 
 ##### 29.1.?.?.? Writing [file.stream.write]
 
 ```c++
-void write(span<const byte> buffer);
+streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* Writes `ssize(buffer)` bytes to the stream and advances the position by that amount.
+*Effects:* If `empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+
+*Returns:* The amount of bytes written.
 
 *Throws:* TODO
