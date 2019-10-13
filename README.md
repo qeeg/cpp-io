@@ -79,16 +79,16 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
   * Double argument versions of `seekg` and `seekp` -> `seek_position`.
+  * `flush` member function was removed.
 * `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::seek_direction`.
 * `get`, `getline`, `ignore`, `peek`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
-* Since it is not always possible to read or write all requested bytes in system call (especially during networking), the interface has been changed accordingly:
+* Since it is not always possible to read or write all requested bytes in one system call (especially during networking), the interface has been changed accordingly:
   * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
   * `std::io::output_stream` requires `write_some` member function that writes one or more bytes from the stream and returns amount of bytes written.
   * `gcount` became the return value of `read_some`.
   * `read` and `write` member functions were removed.
-* `flush` member function was removed as there is no buffering.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
 ## Tutorial
@@ -554,9 +554,9 @@ concept stream_base = requires(const T s)
 		{s.get_position()} -> same_as<streamoff>;
 	} && requires(T s, format f, streamoff position, seek_direction direction)
 	{
-		{s.set_format(f)};
-		{s.set_position(position)};
-		{s.seek_position(position, direction)};
+		s.set_format(f);
+		s.set_position(position);
+		s.seek_position(position, direction);
 	};
 ```
 
