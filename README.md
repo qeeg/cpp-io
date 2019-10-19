@@ -855,7 +855,7 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
 * Must be less than or equal to `ssize(buffer)`.
 * Must be representable as `streamsize`.
@@ -1001,7 +1001,7 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ == ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that is satisfies the following constrains:
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that it satisfies the following constrains:
 
 * Must be less than or equal to `ssize(buffer)`.
 * Must be representable as `streamsize`.
@@ -1150,7 +1150,7 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
 * Must be less than or equal to `ssize(buffer)`.
 * Must be representable as `streamsize`.
@@ -1173,7 +1173,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ == ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that is satisfies the following constrains:
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that it satisfies the following constrains:
 
 * Must be less than or equal to `ssize(buffer)`.
 * Must be representable as `streamsize`.
@@ -1337,7 +1337,7 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
 * Must be less than or equal to `ssize(buffer)`.
 * Must be representable as `streamsize`.
@@ -1522,7 +1522,7 @@ constexpr streamsize write_some(span<const byte> buffer);
 
 *Effects:* If `empty(buffer)`, returns `0`. If `position_ == buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ssize(buffer_)`:
 
-* Determines the amount of bytes to write so that is satisfies the following constrains:
+* Determines the amount of bytes to write so that it satisfies the following constrains:
   * Must be less than or equal to `ssize(buffer)`.
   * Must be representable as `streamsize`.
   * Position after the write must be less than or equal to `ssize(buffer_)`.
@@ -1531,7 +1531,7 @@ constexpr streamsize write_some(span<const byte> buffer);
 
 Otherwise:
 
-* Determines the amount of bytes to write so that is satisfies the following constrains:
+* Determines the amount of bytes to write so that it satisfies the following constrains:
   * Must be less than or equal to `ssize(buffer)`.
   * Must be representable as `streamsize`.
   * Position after the write must be less than or equal to `buffer_.max_size()`.
@@ -1716,7 +1716,7 @@ constexpr void seek_position(streamoff offset, seek_direction direction);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that is satisfies the following constrains:
+*Effects:* If `empty(buffer)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
 * Must be less than or equal to `ssize(buffer)`.
 * Must be representable as `streamsize`.
@@ -1741,7 +1741,7 @@ constexpr streamsize write_some(span<const byte> buffer);
 
 *Effects:* If `empty(buffer)`, returns `0`. If `position_ == buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ssize(buffer_)`:
 
-* Determines the amount of bytes to write so that is satisfies the following constrains:
+* Determines the amount of bytes to write so that it satisfies the following constrains:
   * Must be less than or equal to `ssize(buffer)`.
   * Must be representable as `streamsize`.
   * Position after the write must be less than or equal to `ssize(buffer_)`.
@@ -1750,7 +1750,7 @@ constexpr streamsize write_some(span<const byte> buffer);
 
 Otherwise:
 
-* Determines the amount of bytes to write so that is satisfies the following constrains:
+* Determines the amount of bytes to write so that it satisfies the following constrains:
   * Must be less than or equal to `ssize(buffer)`.
   * Must be representable as `streamsize`.
   * Position after the write must be less than or equal to `buffer_.max_size()`.
