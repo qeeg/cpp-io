@@ -55,12 +55,12 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 ## Design decisions
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
-* The inheritance heirarchy of legacy text streams has been changed to concepts. Legacy base classes have become the following concepts:
+* The inheritance heirarchy of legacy text streams has been changed to concepts. Legacy base class templates have become the following concepts:
   * `std::ios_base` and `std::basic_ios` -> `std::io::stream_base`.
   * `std::basic_istream` -> `std::io::input_stream`.
   * `std::basic_ostream` -> `std::io::output_stream`.
   * `std::basic_stream` -> `std::io::stream`.
-* Concrete classes have been renamed as follows:
+* Concrete class templates have been renamed as follows:
   * `std::basic_istringstream` -> `std::io::basic_input_memory_stream`.
   * `std::basic_ostringstream` -> `std::io::basic_output_memory_stream`.
   * `std::basic_stringstream` -> `std::io::basic_memory_stream`.
@@ -79,16 +79,16 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
   * Double argument versions of `seekg` and `seekp` -> `seek_position`.
-  * `flush` member function was removed.
+  * `peek`, `putback`, `unget` and `flush` member functions were removed.
 * `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::base_position`.
-* `get`, `getline`, `ignore`, `peek`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
+* `getline` and `ignore` member functions were removed because they don't make sense during binary IO.
 * Since it is not always possible to read or write all requested bytes in one system call (especially during networking), the interface has been changed accordingly:
   * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
-  * `std::io::output_stream` requires `write_some` member function that writes one or more bytes from the stream and returns amount of bytes written.
+  * `std::io::output_stream` requires `write_some` member function that writes one or more bytes to the stream and returns amount of bytes written.
   * `gcount` became the return value of `read_some`.
-  * `read` and `write` member functions were removed.
+  * `get`, `read`, `put` and `write` member functions were removed in favor of `read_some` and `write_some`.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
 ## Tutorial
@@ -103,16 +103,16 @@ int main()
 {
 	unsigned int value = 42;
 
-	// Create a stream. This stream will write to dynamically allocated memory
+	// Create a stream. This stream will write to dynamically allocated memory.
 	std::io::output_memory_stream s;
 
-	// Write the value to the stream
+	// Write the value to the stream.
 	std::io::write(s, value);
 
-	// Get reference to the buffer of the stream
+	// Get reference to the buffer of the stream.
 	const auto& buffer = s.get_buffer();
 
-	// Print the buffer
+	// Print the buffer.
 	for (auto byte : buffer)
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
@@ -120,7 +120,7 @@ int main()
 }
 ```
 
-The result is implementation defined. For a random value it would depend on `CHAR_BIT`, `sizeof(unsigned int)` and `std::endian::native`. On AMD64 this will print:
+The result is implementation defined because by default the bytes of the integer are being copied as-is without any processing. This is the fastest. You don't pay for what you don't use. The output would depend on `CHAR_BIT`, `sizeof(unsigned int)` and `std::endian::native`. On AMD64 this will print:
 
 ```
 42 0 0 0
@@ -137,25 +137,26 @@ We can be more strict and have more portable layout:
 #include <io>
 #include <iostream>
 
+// Do not compile on systems with non-8-bit bytes.
 static_assert(CHAR_BIT == 8)
 
 int main()
 {
 	std::uint32_t value = 42;
 
-	// Create a specific binary format
+	// Create a specific binary format.
+	// Here we want our data in the stream to be in big endian byte order.
 	std::io::format f{std::endian::big};
 
-	// Create a stream with our format
+	// Create a stream with our format.
 	std::io::output_memory_stream s{f};
 
-	// Write the value to the stream
+	// Write the value to the stream.
+	// This will perform endianness conversion on non-big-endian systems.
 	std::io::write(s, value);
 
-	// Get reference to the buffer of the stream
 	const auto& buffer = s.get_buffer();
 
-	// Print the buffer
 	for (auto byte : buffer)
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
@@ -203,7 +204,6 @@ int main()
 
 	const auto& buffer = s.get_buffer();
 
-	// Print the buffer
 	for (auto byte : buffer)
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
@@ -214,7 +214,7 @@ int main()
 ### Example 4: Working with 3rd party type
 
 ```c++
-struct VendorType // Can't modify interface
+struct VendorType // Can't modify interface.
 {
 	int a;
 	float b;
@@ -245,7 +245,6 @@ int main()
 
 	const auto& buffer = s.get_buffer();
 
-	// Print the buffer
 	for (auto byte : buffer)
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
