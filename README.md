@@ -260,26 +260,82 @@ There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is d
 ```c++
 #include <io>
 #include <array>
+#include <vector>
+
+namespace RIFF // Put things into separate namespace to save typing long names.
+{
+
+// Describes a single RIFF chunk. It starts with 4 byte ID, then size as 32-bit
+// unsigned integer followed by the data of the chunk. The size doesn't include
+// ID and size fields, only the size of raw data. If size is odd, there is 1
+// byte padding so all chunks are aligned at even offsets.
+struct Chunk
+{
+	using ID = std::array<std::byte, 4>;
+	using Size = std::uint32_t;
+	
+	ID id;
+	std::vector<std::byte> data;
+	
+	Chunk(std::io::input_stream auto& stream)
+	{
+		this->read(stream);
+	}
+	
+	void read(std::io::input_stream auto& stream)
+	{
+		// Read chunk ID.
+		std::io::read(stream, id);
+		// Read chunk size.
+		Size size;
+		std::io::read(stream, size);
+		// Read chunk data.
+		data.resize(size);
+		std::io::read(stream, data);
+		// Skip padding.
+		if (size % 2 == 1)
+		{
+			stream.seek_position(std::io::base_position::current, 1);
+		}
+	}
+	
+	void write(std::io::output_stream auto& stream) const
+	{
+		// Write chunk ID.
+		std::io::write(stream, id);
+		// Write chunk size.
+		Size size = data.size(); // Production code would make sure there is no
+		// overflow here.
+		std::io::write(stream, size);
+		// Write chunk data.
+		std::io::write(stream, data);
+		// Write padding.
+		if (size % 2 == 1)
+		{
+			std::io::write(stream, std::byte{0});
+		}
+	}
+};
 
 // C++ doesn't have ASCII literals but we can use UTF-8 literals instead.
-constexpr std::array<std::byte, 4> RIFFChunkID{
+constexpr Chunk::ID LittleEndianFile{
 	std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'F'}};
-constexpr std::array<std::byte, 4> RIFXChunkID{
+constexpr Chunk::ID BigEndianFile{
 	std::byte{u8'R'}, std::byte{u8'I'}, std::byte{u8'F'}, std::byte{u8'X'}};
 	
-class RIFFFile
+class File
 {
 public:
-	RIFFFile(std::io::input_stream auto& stream)
+	File(std::io::input_stream auto& stream)
 	{
 		this->read(stream);
 	}
 
 	void read(std::io::input_stream auto& stream)
 	{
-		std::array<std::byte, 4> chunk_id;
+		Chunk::ID chunk_id;
 		std::io::read(stream, chunk_id);
-		if (chunk_id == RIFFChunkID)
+		if (chunk_id == LittleEndianFile)
 		{
 			// We have little endian file.
 			// Set format to little endian.
@@ -287,7 +343,7 @@ public:
 			format.set_endianness(std::endian::little);
 			stream.set_format(format);
 		}
-		else if (chunk_id == RIFXChunkID)
+		else if (chunk_id == BigEndianFile)
 		{
 			// We have big endian file.
 			// Set format to big endian.
@@ -302,12 +358,24 @@ public:
 		// We have set correct endianness based on the 1st chunk id.
 		// The rest of the file will be deserialized correctly according to
 		// our format.
-		std::uint32_t chunk_size;
-		std::io::read(stream, chunk_size);
-		/* ... */
+		Chunk::Size file_size;
+		// Read the size of the file.
+		std::io::read(stream, file_size);
+		// Now we can determine where the file ends.
+		std::streamoff end_position = stream.get_position() + file_size;
+		// Read the form type of the file.
+		std::io::read(stream, m_form_type);
+		// Read all the chunks.
+		while (stream.get_position() < end_position)
+		{
+			m_chunks.emplace_back(stream);
+		}
 	}
 private:
-	/* ... */
+	ChunkID m_form_type;
+	std::vector<Chunk> m_chunks;
+}
+
 }
 ```
 
