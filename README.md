@@ -82,7 +82,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `flush` member function was removed.
 * `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
-* `std::ios_base::seekdir` has been replaced with `std::io::seek_direction`.
+* `std::ios_base::seekdir` has been replaced with `std::io::base_position`.
 * `get`, `getline`, `ignore`, `peek`, `putback`, `unget` and `put` member functions were removed because they don't make sense during binary IO.
 * Since it is not always possible to read or write all requested bytes in one system call (especially during networking), the interface has been changed accordingly:
   * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
@@ -394,7 +394,7 @@ const error_category& category() noexcept;
 
 class io_error;
 
-enum class seek_direction
+enum class base_position
 {
 	beginning,
 	current,
@@ -556,11 +556,11 @@ concept stream_base = requires(const T s)
 	{
 		{s.get_format()} -> same_as<format>;
 		{s.get_position()} -> same_as<streamoff>;
-	} && requires(T s, format f, streamoff position, seek_direction direction)
+	} && requires(T s, format f, streamoff position, base_position base)
 	{
 		s.set_format(f);
 		s.set_position(position);
-		s.seek_position(position, direction);
+		s.seek_position(base, position);
 	};
 ```
 
@@ -602,7 +602,7 @@ void set_position(streamoff position);
 * `value_too_large` - if position is greater than the maximum size supported by the stream.
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction);
+void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -761,7 +761,7 @@ public:
 	// Position
 	constexpr streamoff get_position() const noexcept;
 	constexpr void set_position(streamoff position);
-	constexpr void seek_position(streamoff offset, seek_direction direction);
+	constexpr void seek_position(base_position base, streamoff offset);
 
 	// Reading
 	constexpr streamsize read_some(span<byte> buffer);
@@ -837,7 +837,7 @@ constexpr void set_position(streamoff position);
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
 ```c++
-constexpr void seek_position(streamoff offset, seek_direction direction);
+constexpr void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -907,7 +907,7 @@ public:
 	// Position
 	constexpr streamoff get_position() const noexcept;
 	constexpr void set_position(streamoff position);
-	constexpr void seek_position(streamoff offset, seek_direction direction);
+	constexpr void seek_position(base_position base, streamoff offset);
 
 	// Writing
 	constexpr streamsize write_some(span<const byte> buffer);
@@ -983,7 +983,7 @@ constexpr void set_position(streamoff position);
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
 ```c++
-constexpr void seek_position(streamoff offset, seek_direction direction);
+constexpr void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -1053,7 +1053,7 @@ public:
 	// Position
 	constexpr streamoff get_position() const noexcept;
 	constexpr void set_position(streamoff position);
-	constexpr void seek_position(streamoff offset, seek_direction direction);
+	constexpr void seek_position(base_position base, streamoff offset);
 
 	// Reading
 	constexpr streamsize read_some(span<byte> buffer);
@@ -1132,7 +1132,7 @@ constexpr void set_position(streamoff position);
 * `value_too_large` - if position cannot be represented as type `ptrdiff_t`.
 
 ```c++
-constexpr void seek_position(streamoff offset, seek_direction direction);
+constexpr void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -1229,7 +1229,7 @@ public:
 	// Position
 	constexpr streamoff get_position() const noexcept;
 	constexpr void set_position(streamoff position);
-	constexpr void seek_position(streamoff offset, seek_direction direction);
+	constexpr void seek_position(base_position base, streamoff offset);
 
 	// Reading
 	constexpr streamsize read_some(span<byte> buffer);
@@ -1319,7 +1319,7 @@ constexpr void set_position(streamoff position);
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
 ```c++
-constexpr void seek_position(streamoff offset, seek_direction direction);
+constexpr void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -1412,7 +1412,7 @@ public:
 	// Position
 	constexpr streamoff get_position() const noexcept;
 	constexpr void set_position(streamoff position);
-	constexpr void seek_position(streamoff offset, seek_direction direction);
+	constexpr void seek_position(base_position base, streamoff offset);
 
 	// Writing
 	constexpr streamsize write_some(span<const byte> buffer);
@@ -1502,7 +1502,7 @@ constexpr void set_position(streamoff position);
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
 ```c++
-constexpr void seek_position(streamoff offset, seek_direction direction);
+constexpr void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -1605,7 +1605,7 @@ public:
 	// Position
 	constexpr streamoff get_position() const noexcept;
 	constexpr void set_position(streamoff position);
-	constexpr void seek_position(streamoff offset, seek_direction direction);
+	constexpr void seek_position(base_position base, streamoff offset);
 
 	// Reading
 	constexpr streamsize read_some(span<byte> buffer);
@@ -1698,7 +1698,7 @@ constexpr void set_position(streamoff position);
 * `value_too_large` - if position if position cannot be represented as type `typename Container::difference_type`.
 
 ```c++
-constexpr void seek_position(streamoff offset, seek_direction direction);
+constexpr void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -1828,7 +1828,7 @@ public:
 	// Position
 	streamoff get_position() const;
 	void set_position(streamoff position);
-	void seek_position(streamoff offset, seek_direction direction);
+	void seek_position(base_position base, streamoff offset);
 
 	// Reading
 	streamsize read_some(span<byte> buffer);
@@ -1884,7 +1884,7 @@ void set_position(streamoff position);
 *Throws:* TODO
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction);
+void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -1924,7 +1924,7 @@ public:
 	// Position
 	streamoff get_position() const;
 	void set_position(streamoff position);
-	void seek_position(streamoff offset, seek_direction direction);
+	void seek_position(base_position base, streamoff offset);
 
 	// Writing
 	streamsize write_some(span<const byte> buffer);
@@ -1980,7 +1980,7 @@ void set_position(streamoff position);
 *Throws:* TODO
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction);
+void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
@@ -2020,7 +2020,7 @@ public:
 	// Position
 	streamoff get_position() const;
 	void set_position(streamoff position);
-	void seek_position(streamoff offset, seek_direction direction);
+	void seek_position(base_position base, streamoff offset);
 
 	// Reading
 	streamsize read_some(span<byte> buffer);
@@ -2079,7 +2079,7 @@ void set_position(streamoff position);
 *Throws:* TODO
 
 ```c++
-void seek_position(streamoff offset, seek_direction direction);
+void seek_position(base_position base, streamoff offset);
 ```
 
 *Effects:* TODO
