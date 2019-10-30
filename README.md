@@ -284,12 +284,12 @@ struct Chunk
 	
 	void read(std::io::input_stream auto& stream)
 	{
-		// Read chunk ID.
+		// Read the ID of the chunk.
 		std::io::read(stream, id);
-		// Read chunk size.
+		// Read the size of the chunk.
 		Size size;
 		std::io::read(stream, size);
-		// Read chunk data.
+		// Read the data of the chunk.
 		data.resize(size);
 		std::io::read(stream, data);
 		// Skip padding.
@@ -301,19 +301,30 @@ struct Chunk
 	
 	void write(std::io::output_stream auto& stream) const
 	{
-		// Write chunk ID.
+		// Write the ID of the chunk.
 		std::io::write(stream, id);
-		// Write chunk size.
-		Size size = data.size(); // Production code would make sure there is no
-		// overflow here.
+		// Write the size of the chunk.
+		Size size = std::size(data); // Production code would make sure there is
+		// no overflow here.
 		std::io::write(stream, size);
-		// Write chunk data.
+		// Write the data of the chunk.
 		std::io::write(stream, data);
 		// Write padding.
 		if (size % 2 == 1)
 		{
 			std::io::write(stream, std::byte{0});
 		}
+	}
+	
+	// Returns the full size of the chunk when serializing.
+	Size GetSize() const noexcept
+	{
+		Size size = 8 + std::size(data);
+		if (size % 2 == 1)
+		{
+			++size;
+		}
+		return size;
 	}
 };
 
@@ -333,29 +344,28 @@ public:
 
 	void read(std::io::input_stream auto& stream)
 	{
+		// Read the main chunk ID.
 		Chunk::ID chunk_id;
 		std::io::read(stream, chunk_id);
 		if (chunk_id == LittleEndianFile)
 		{
 			// We have little endian file.
-			// Set format to little endian.
-			auto format = stream.get_format();
-			format.set_endianness(std::endian::little);
-			stream.set_format(format);
+			m_endianness = std::endian::little;
 		}
 		else if (chunk_id == BigEndianFile)
 		{
 			// We have big endian file.
-			// Set format to big endian.
-			auto format = stream.get_format();
-			format.set_endianness(std::endian::big);
-			stream.set_format(format);
+			m_endianness = std::endian::big;
 		}
 		else
 		{
 			throw /* ... */
 		}
-		// We have set correct endianness based on the 1st chunk id.
+		// Set stream format to correct endianness.
+		auto format = stream.get_format();
+		format.set_endianness(m_endianness);
+		stream.set_format(format);
+		// We have set correct endianness based on the 1st chunk ID.
 		// The rest of the file will be deserialized correctly according to
 		// our format.
 		Chunk::Size file_size;
@@ -371,7 +381,45 @@ public:
 			m_chunks.emplace_back(stream);
 		}
 	}
+	
+	void write(std::io::output_stream auto& stream) const
+	{
+		// Set the endianness of the stream.
+		auto format = stream.get_format();
+		format.set_endianness(m_endianness);
+		stream.set_format(format);
+		// Write the ID of the main chunk.
+		if (m_endianness == std::endian::little)
+		{
+			std::io::write(stream, LittleEndianFile);
+		}
+		else if (m_endianness == std::endian::big)
+		{
+			std::io::write(stream, BigEndianFile);
+		}
+		else
+		{
+			throw /* ... */
+		}
+		// Calculate the size of the file. For that we need to sum up the size
+		// of form type and sizes of all the chunks.
+		Chunk::Size file_size = 4;
+		for (const auto& chunk : m_chunks)
+		{
+			file_size += chunk.GetSize();
+		}
+		// Write the size of the file.
+		std::io::write(stream, file_size);
+		// Write the form type of the file.
+		std::io::write(stream, m_form_type);
+		// Write all the chunks.
+		for (const auto& chunk : m_chunks)
+		{
+			std::io::write(stream, chunk);
+		}
+	}
 private:
+	std::endian m_endianness;
 	ChunkID m_form_type;
 	std::vector<Chunk> m_chunks;
 }
