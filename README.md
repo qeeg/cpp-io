@@ -170,7 +170,11 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 0 0 0 42
 ```
 
-### Example 3: Working with user defined type
+### Example 3: Working with floating point numbers
+
+TODO
+
+### Example 4: Working with user defined type
 
 ```c++
 #include <io>
@@ -211,7 +215,7 @@ int main()
 }
 ```
 
-### Example 4: Working with 3rd party type
+### Example 5: Working with user defined type (another approach)
 
 ```c++
 struct VendorType // Can't modify interface.
@@ -252,7 +256,11 @@ int main()
 }
 ```
 
-### Example 5: Resource Interchange File Format
+### Example 6: Working with enums
+
+TODO
+
+### Example 7: Resource Interchange File Format
 
 There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
 
