@@ -284,12 +284,16 @@ struct Chunk
 	ID id;
 	std::vector<std::byte> data;
 	
-	Chunk(std::io::input_stream auto& stream)
+	template <typename S>
+	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	Chunk(S& stream)
 	{
 		this->read(stream);
 	}
 	
-	void read(std::io::input_stream auto& stream)
+	template <typename S>
+	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	void read(S& stream)
 	{
 		// Read the ID of the chunk.
 		std::io::read(stream, id);
@@ -344,12 +348,16 @@ constexpr Chunk::ID BigEndianFile{
 class File
 {
 public:
-	File(std::io::input_stream auto& stream)
+	template <typename S>
+	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	File(S& stream)
 	{
 		this->read(stream);
 	}
 
-	void read(std::io::input_stream auto& stream)
+	template <typename S>
+	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	void read(S& stream)
 	{
 		// Read the main chunk ID.
 		Chunk::ID chunk_id;
@@ -530,6 +538,8 @@ enum class base_position
 template <typename T>
 concept stream_base = see below;
 template <typename T>
+concept seekable_stream = see below;
+template <typename T>
 concept input_stream = see below;
 template <typename T>
 concept output_stream = see below;
@@ -680,12 +690,9 @@ template <typename T>
 concept stream_base = requires(const T s)
 	{
 		{s.get_format()} -> same_as<format>;
-		{s.get_position()} -> same_as<streamoff>;
-	} && requires(T s, format f, streamoff position, base_position base)
+	} && requires(T s, format f)
 	{
 		s.set_format(f);
-		s.set_position(position);
-		s.seek_position(base, position);
 	};
 ```
 
@@ -705,7 +712,23 @@ void set_format(format f) noexcept;
 
 *Effects:* Sets the stream format to `f`.
 
-##### 29.1.?.?.? Position [stream.base.position]
+#### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
+
+```c++
+template <typename T>
+concept seekable_stream = requires(const T s)
+	{
+		{s.get_position()} -> same_as<streamoff>;
+	} && requires(T s, streamoff position, base_position base)
+	{
+		s.set_position(position);
+		s.seek_position(base, position);
+	};
+```
+
+TODO
+
+##### 29.1.?.?.? Position [seekable.stream.position]
 
 ```c++
 streamoff get_position();
