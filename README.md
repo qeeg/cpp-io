@@ -438,6 +438,8 @@ TODO: More tutorials? More explanations.
 
 ## Implementation experience
 
+The reference implementation is here: https://github.com/Lyberta/cpp-io-impl
+
 Most of the proposal can be implemented in ISO C++. Low level conversions inside `std::io::read` and `std::io::write` require knowledge of implementation defined format of integers and floating point numbers. File IO requires calling operating system API. The following table provides some examples:
 
 | Function        | POSIX   | Windows            | UEFI                            |
