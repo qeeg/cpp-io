@@ -506,7 +506,6 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 ## Open issues
 
 * `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
-* `std::span` vs `std::ranges::contiguous_range`.
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if P1468 is accepted.
