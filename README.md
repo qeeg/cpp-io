@@ -258,7 +258,44 @@ int main()
 
 ### Example 6: Working with enums
 
-TODO
+Enumerations are essentially strong integers. Therefore, serializing them is the same as integers and is done out-of-the-box by `std::io::write`. However, reading is not so simple since there is no language-level mechanism to iterate the valid values. For now you have to write non-member `read` function that will read the integer and manually check if it has a legal value. It is hopeful that the need to write such boilerplate code will be resolved by reflection in the future.
+
+```c++
+enum class MyEnum
+{
+	Foo,
+	Bar
+};
+
+void read(std::io::input_stream auto& stream, MyEnum& my_enum)
+{
+	// Create a raw integer that is the same type as underlying type of our
+	// enumeration.
+	std::underlying_type_t<MyEnum> raw;
+	
+	// Read the integer from the stream.
+	std::io::read(stream, raw);
+	
+	// Cast it to our enumeration.
+	my_enum = static_cast<MyEnum>(raw);
+	
+	// Check the value of enumeration.
+	switch (my_enum)
+	{
+		case MyEnum::Foo:
+		case MyEnum::Bar:
+		{
+			// The value is legal.
+			return;
+		}
+		default:
+		{
+			// The value is illegal.
+			throw /* ... */
+		}
+	}
+}
+```
 
 ### Example 7: Resource Interchange File Format
 
