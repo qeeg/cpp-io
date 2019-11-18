@@ -2036,10 +2036,10 @@ protected:
 		format f = {});
 	file_stream_base(native_handle_type handle, format f = {});
 	file_stream_base(const file_stream_base&) = delete;
-	file_stream_base(file_stream_base&&) = default;
+	file_stream_base(file_stream_base&&);
 	~file_stream_base();
 	file_stream_base& operator=(const file_stream_base&) = delete;
-	file_stream_base& operator=(file_stream_base&&) = default;
+	file_stream_base& operator=(file_stream_base&&);
 private:
 	format format_; // exposition only
 ```
