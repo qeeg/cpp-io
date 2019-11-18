@@ -540,6 +540,7 @@ class format;
 	
 enum class io_errc
 {
+	bad_file_descriptor = implementation-defined,
 	invalid_argument = implementation-defined,
 	value_too_large = implementation-defined,
 	reached_end_of_file = implementation-defined,
@@ -610,6 +611,14 @@ using output_memory_stream = basic_output_memory_stream<vector<byte>>;
 using memory_stream = basic_memory_stream<vector<byte>>;
 
 // File streams
+
+enum class open_mode
+{
+	read,
+	write
+};
+
+class file_stream_base;
 class input_file_stream;
 class output_file_stream;
 class file_stream;
@@ -626,7 +635,8 @@ class format final
 public:
 	// Constructor
 	constexpr format(endian endianness = endian::native,
-		floating_point_format float_format = floating_point_format::native);
+		floating_point_format float_format = floating_point_format::native)
+		noexcept;
 
 	// Member functions
 	constexpr endian get_endianness() const noexcept;
@@ -650,7 +660,8 @@ TODO
 
 ```c++
 constexpr format(endian endianness = endian::native,
-	floating_point_format float_format = floating_point_format::native);
+	floating_point_format float_format = floating_point_format::native)
+	noexcept;
 ```
 
 *Ensures:* `endianness_ == endianness` and `float_format_ == float_format`.
@@ -935,8 +946,9 @@ class input_span_stream final
 {
 public:
 	// Constructors
-	constexpr input_span_stream(format f = {});
-	constexpr input_span_stream(span<const byte> buffer, format f = {});
+	constexpr input_span_stream(format f = {}) noexcept;
+	constexpr input_span_stream(span<const byte> buffer, format f = {})
+		noexcept;
 
 	// Format
 	constexpr format get_format() const noexcept;
@@ -965,7 +977,7 @@ TODO
 ##### 29.1.?.?.? Constructors [input.span.stream.cons]
 
 ```c++
-constexpr input_span_stream(format f = {});
+constexpr input_span_stream(format f = {}) noexcept;
 ```
 
 *Ensures:*
@@ -975,7 +987,7 @@ constexpr input_span_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-constexpr input_span_stream(span<const byte> buffer, format f = {});
+constexpr input_span_stream(span<const byte> buffer, format f = {}) noexcept;
 ```
 
 *Ensures:*
@@ -1081,8 +1093,8 @@ class output_span_stream final
 {
 public:
 	// Constructors
-	constexpr output_span_stream(format f = {});
-	constexpr output_span_stream(span<byte> buffer, format f = {});
+	constexpr output_span_stream(format f = {}) noexcept;
+	constexpr output_span_stream(span<byte> buffer, format f = {}) noexcept;
 
 	// Format
 	constexpr format get_format() const noexcept;
@@ -1111,7 +1123,7 @@ TODO
 ##### 29.1.?.?.? Constructors [output.span.stream.cons]
 
 ```c++
-constexpr output_span_stream(format f = {});
+constexpr output_span_stream(format f = {}) noexcept;
 ```
 
 *Ensures:*
@@ -1121,7 +1133,7 @@ constexpr output_span_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-constexpr output_span_stream(span<byte> buffer, format f = {});
+constexpr output_span_stream(span<byte> buffer, format f = {}) noexcept;
 ```
 
 *Ensures:*
@@ -1227,8 +1239,8 @@ class span_stream final
 {
 public:
 	// Constructors
-	constexpr span_stream(format f = {});
-	constexpr span_stream(span<byte> buffer, format f = {});
+	constexpr span_stream(format f = {}) noexcept;
+	constexpr span_stream(span<byte> buffer, format f = {}) noexcept;
 
 	// Format
 	constexpr format get_format() const noexcept;
@@ -1260,7 +1272,7 @@ TODO
 ##### 29.1.?.?.? Constructors [span.stream.cons]
 
 ```c++
-constexpr span_stream(format f = {});
+constexpr span_stream(format f = {}) noexcept;
 ```
 
 *Ensures:*
@@ -1270,7 +1282,7 @@ constexpr span_stream(format f = {});
 * `position_ == 0`.
 
 ```c++
-constexpr span_stream(span<byte> buffer, format f = {});
+constexpr span_stream(span<byte> buffer, format f = {}) noexcept;
 ```
 
 *Ensures:*
@@ -1991,20 +2003,19 @@ constexpr void reset_buffer() noexcept;
 
 ### 29.1.? File streams [file.streams???] (naming conflict)
 
-#### 29.1.?.1 Class `input_file_stream` [input.file.stream]
+#### 29.1.?.? Native handles [file.streams.native]
+
+TODO
+
+#### 29.1.?.? Class `file_stream_base` [file.stream.base]
 
 ```c++
-class input_file_stream final
+
+class file_stream_base
 {
 public:
-	// Construct/copy/destroy
-	input_file_stream(const filesystem::path& file_name, format f = {});
-	input_file_stream(const input_file_stream&) = delete;
-	input_file_stream(input_file_stream&&) = delete;
-	~input_file_stream();
-	input_file_stream& operator=(const input_file_stream&) = delete;
-	input_file_stream& operator=(input_file_stream&&) = delete;
-
+	using native_handle_type = implementation-defined;
+	
 	// Format
 	format get_format() const noexcept;
 	void set_format(format f) noexcept;
@@ -2014,19 +2025,40 @@ public:
 	void set_position(streamoff position);
 	void seek_position(base_position base, streamoff offset);
 
-	// Reading
-	streamsize read_some(span<byte> buffer);
+	// Native handle management
+	native_handle_type native_handle();
+	void assign(native_handle_type handle);
+	native_handle_type release();
+protected:
+	// Construct/copy/destroy
+	file_stream_base(format f = {}) noexcept;
+	file_stream_base(const filesystem::path& file_name, open_mode mode,
+		format f = {});
+	file_stream_base(native_handle_type handle, format f = {});
+	file_stream_base(const file_stream_base&) = delete;
+	file_stream_base(file_stream_base&&) = default;
+	~file_stream_base();
+	file_stream_base& operator=(const file_stream_base&) = delete;
+	file_stream_base& operator=(file_stream_base&&) = default;
 private:
 	format format_; // exposition only
-};
 ```
 
 TODO
 
-##### 29.1.?.?.? Constructors [input.file.stream.cons]
+##### 29.1.?.?.? Constructors [file.stream.base.cons]
 
 ```c++
-input_file_stream(const filesystem::path& file_name, format f = {});
+file_stream_base(format f = {}) noexcept;
+```
+
+*Effects:* TODO
+
+*Ensures:* `format_ == f`.
+
+```c++
+file_stream_base(const filesystem::path& file_name, open_mode mode,
+	format f = {});
 ```
 
 *Effects:* TODO
@@ -2035,7 +2067,17 @@ input_file_stream(const filesystem::path& file_name, format f = {});
 
 *Throws:* TODO
 
-##### 29.1.?.?.? Format [input.file.stream.format]
+```c++
+file_stream_base(native_handle_type handle, format f = {});
+```
+
+*Effects:* TODO
+
+*Ensures:* `format_ == f`.
+
+*Throws:* TODO
+
+##### 29.1.?.?.? Format [file.stream.base.format]
 
 ```c++
 format get_format() const noexcept;
@@ -2049,10 +2091,10 @@ void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [input.file.stream.position]
+##### 29.1.?.?.? Position [file.stream.base.position]
 
 ```c++
-streamoff get_position();
+streamoff get_position() const;
 ```
 
 *Returns:* Current position of the stream.
@@ -2074,6 +2116,44 @@ void seek_position(base_position base, streamoff offset);
 *Effects:* TODO
 
 *Throws:* TODO
+
+#### 29.1.?.? Class `input_file_stream` [input.file.stream]
+
+```c++
+class input_file_stream final : public file_stream_base
+{
+public:
+	// Construct/copy/destroy
+	input_file_stream(format f = {}) noexcept;
+	input_file_stream(const filesystem::path& file_name, format f = {});
+	input_file_stream(native_handle_type handle, format f = {});
+
+	// Reading
+	streamsize read_some(span<byte> buffer);
+};
+```
+
+TODO
+
+##### 29.1.?.?.? Constructors [input.file.stream.cons]
+
+```c++
+input_file_stream(format f = {}) noexcept;
+```
+
+*Effects:* Initializes the base class with `file_stream_base(f)`.
+
+```c++
+input_file_stream(const filesystem::path& file_name, format f = {});
+```
+
+*Effects:* Initializes the base class with `file_stream_base(handle, open_mode::read, f)`.
+
+```c++
+input_file_stream(native_handle_type handle, format f = {});
+```
+
+*Effects:* Initializes the base class with `file_stream_base(handle, f)`.
 
 ##### 29.1.?.?.? Reading [input.file.stream.read]
 
@@ -2087,33 +2167,19 @@ streamsize read_some(span<byte> buffer);
 
 *Throws:* TODO
 
-#### 29.1.?.2 Class `output_file_stream` [output.file.stream]
+#### 29.1.?.? Class `output_file_stream` [output.file.stream]
 
 ```c++
-class output_file_stream final
+class output_file_stream final : public file_stream_base
 {
 public:
 	// Construct/copy/destroy
+	output_file_stream(format f = {}) noexcept;
 	output_file_stream(const filesystem::path& file_name, format f = {});
-	output_file_stream(const output_file_stream&) = delete;
-	output_file_stream(output_file_stream&&) = delete;
-	~output_file_stream();
-	output_file_stream& operator=(const output_file_stream&) = delete;
-	output_file_stream& operator=(output_file_stream&&) = delete;
-
-	// Format
-	format get_format() const noexcept;
-	void set_format(format f) noexcept;
-
-	// Position
-	streamoff get_position() const;
-	void set_position(streamoff position);
-	void seek_position(base_position base, streamoff offset);
+	output_file_stream(native_handle_type handle, format f = {});
 
 	// Writing
 	streamsize write_some(span<const byte> buffer);
-private:
-	format format_; // exposition only
 };
 ```
 
@@ -2122,54 +2188,22 @@ TODO
 ##### 29.1.?.?.? Constructors [output.file.stream.cons]
 
 ```c++
+output_file_stream(format f = {}) noexcept;
+```
+
+*Effects:* Initializes the base class with `file_stream_base(f)`.
+
+```c++
 output_file_stream(const filesystem::path& file_name, format f = {});
 ```
 
-*Effects:* TODO
-
-*Ensures:* `format_ == f`.
-
-*Throws:* TODO
-
-##### 29.1.?.?.? Format [output.file.stream.format]
+*Effects:* Initializes the base class with `file_stream_base(handle, open_mode::write, f)`.
 
 ```c++
-format get_format() const noexcept;
+output_file_stream(native_handle_type handle, format f = {});
 ```
 
-*Returns:* `format_`.
-
-```c++
-void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
-
-##### 29.1.?.?.? Position [output.file.stream.position]
-
-```c++
-streamoff get_position();
-```
-
-*Returns:* Current position of the stream.
-
-*Throws:* TODO
-
-```c++
-void set_position(streamoff position);
-```
-
-*Effects:* Sets the position of the stream to the given value.
-
-*Throws:* TODO
-
-```c++
-void seek_position(base_position base, streamoff offset);
-```
-
-*Effects:* TODO
-
-*Throws:* TODO
+*Effects:* Initializes the base class with `file_stream_base(handle, f)`.
 
 ##### 29.1.?.?.? Writing [output.file.stream.write]
 
@@ -2183,36 +2217,22 @@ streamsize write_some(span<const byte> buffer);
 
 *Throws:* TODO
 
-#### 29.1.?.3 Class `file_stream` [file.stream]
+#### 29.1.?.? Class `file_stream` [file.stream]
 
 ```c++
-class file_stream final
+class file_stream final : public file_stream_base
 {
 public:
 	// Construct/copy/destroy
+	file_stream(format f = {}) noexcept;
 	file_stream(const filesystem::path& file_name, format f = {});
-	file_stream(const file_stream&) = delete;
-	file_stream(file_stream&&) = delete;
-	~file_stream();
-	file_stream& operator=(const file_stream&) = delete;
-	file_stream& operator=(file_stream&&) = delete;
-
-	// Format
-	format get_format() const noexcept;
-	void set_format(format f) noexcept;
-
-	// Position
-	streamoff get_position() const;
-	void set_position(streamoff position);
-	void seek_position(base_position base, streamoff offset);
+	file_stream(native_handle_type handle, format f = {});
 
 	// Reading
 	streamsize read_some(span<byte> buffer);
 
 	// Writing
 	streamsize write_some(span<const byte> buffer);
-private:
-	format format_; // exposition only
 };
 ```
 
@@ -2221,54 +2241,22 @@ TODO
 ##### 29.1.?.?.? Constructors [file.stream.cons]
 
 ```c++
+file_stream(format f = {}) noexcept;
+```
+
+*Effects:* Initializes the base class with `file_stream_base(f)`.
+
+```c++
 file_stream(const filesystem::path& file_name, format f = {});
 ```
 
-*Effects:* TODO
-
-*Ensures:* `format_ == f`.
-
-*Throws:* TODO
-
-##### 29.1.?.?.? Format [file.stream.format]
+*Effects:* Initializes the base class with `file_stream_base(handle, open_mode::write, f)`.
 
 ```c++
-format get_format() const noexcept;
+file_stream(native_handle_type handle, format f = {});
 ```
 
-*Returns:* `format_`.
-
-```c++
-void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
-
-##### 29.1.?.?.? Position [file.stream.position]
-
-```c++
-streamoff get_position();
-```
-
-*Returns:* Current position of the stream.
-
-*Throws:* TODO
-
-```c++
-void set_position(streamoff position);
-```
-
-*Effects:* Sets the position of the stream to the given value.
-
-*Throws:* TODO
-
-```c++
-void seek_position(base_position base, streamoff offset);
-```
-
-*Effects:* TODO
-
-*Throws:* TODO
+*Effects:* Initializes the base class with `file_stream_base(handle, f)`.
 
 ##### 29.1.?.?.? Reading [file.stream.read]
 
