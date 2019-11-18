@@ -74,7 +74,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `std::io::span_stream`.
 * Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
 * All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The separate class is used in order to make the change of stream format atomic.
-* Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and always start chunks of data with size, any kind of IO error is usually unrecoverable.
+* Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and almost always start chunks of data with size, any kind of IO error is usually unrecoverable.
 * Since there is no more buffering because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
@@ -117,6 +117,7 @@ int main()
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
 	}
+	std::cout << '\n';
 }
 ```
 
@@ -161,6 +162,7 @@ int main()
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
 	}
+	std::cout << '\n';
 }
 ```
 
@@ -212,6 +214,7 @@ int main()
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
 	}
+	std::cout << '\n';
 }
 ```
 
@@ -253,6 +256,7 @@ int main()
 	{
 		std::cout << std::to_integer<int>(byte) << ' ';
 	}
+	std::cout << '\n';
 }
 ```
 
@@ -1431,8 +1435,8 @@ public:
 	constexpr streamsize read_some(span<byte> buffer);
 
 	// Buffer management
-	constexpr const Container& get_buffer() const noexcept &;
-	constexpr Container get_buffer() noexcept &&;
+	constexpr const Container& get_buffer() const & noexcept;
+	constexpr Container get_buffer() && noexcept;
 	constexpr void set_buffer(const Container& new_buffer);
 	constexpr void set_buffer(Container&& new_buffer);
 	constexpr void reset_buffer() noexcept;
@@ -1553,13 +1557,13 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 ##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
 ```c++
-constexpr const Container& get_buffer() const noexcept &;
+constexpr const Container& get_buffer() const & noexcept;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-constexpr Container get_buffer() noexcept &&;
+constexpr Container get_buffer() && noexcept;
 ```
 
 *Returns:* `move(buffer_)`.
@@ -1614,8 +1618,8 @@ public:
 	constexpr streamsize write_some(span<const byte> buffer);
 
 	// Buffer management
-	constexpr const Container& get_buffer() const noexcept &;
-	constexpr Container get_buffer() noexcept &&;
+	constexpr const Container& get_buffer() const & noexcept;
+	constexpr Container get_buffer() && noexcept;
 	constexpr void set_buffer(const Container& new_buffer);
 	constexpr void set_buffer(Container&& new_buffer);
 	constexpr void reset_buffer() noexcept;
@@ -1746,13 +1750,13 @@ Otherwise:
 ##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
 ```c++
-constexpr const Container& get_buffer() const noexcept &;
+constexpr const Container& get_buffer() const & noexcept;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-constexpr Container get_buffer() noexcept &&;
+constexpr Container get_buffer() && noexcept;
 ```
 
 *Returns:* `move(buffer_)`.
@@ -1810,8 +1814,8 @@ public:
 	constexpr streamsize write_some(span<const byte> buffer);
 
 	// Buffer management
-	constexpr const Container& get_buffer() const noexcept &;
-	constexpr Container get_buffer() noexcept &&;
+	constexpr const Container& get_buffer() const & noexcept;
+	constexpr Container get_buffer() && noexcept;
 	constexpr void set_buffer(const Container& new_buffer);
 	constexpr void set_buffer(Container&& new_buffer);
 	constexpr void reset_buffer() noexcept;
@@ -1965,13 +1969,13 @@ Otherwise:
 ##### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
 ```c++
-constexpr const Container& get_buffer() const noexcept &;
+constexpr const Container& get_buffer() const & noexcept;
 ```
 
 *Returns:* `buffer_`.
 
 ```c++
-constexpr Container get_buffer() noexcept &&;
+constexpr Container get_buffer() && noexcept;
 ```
 
 *Returns:* `move(buffer_)`.
