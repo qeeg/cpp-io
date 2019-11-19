@@ -8,6 +8,10 @@ author:
     email: <lyberta@lyberta.net>
 ---
 
+# Abstract
+
+This paper proposes fundamental IO concepts, customization points for serialization and deserialization and streams for memory and file IO.
+
 # Motivation
 
 C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO but it has many drawbacks:
