@@ -139,7 +139,7 @@ We can be more strict and have more portable layout:
 #include <iostream>
 
 // Do not compile on systems with non-8-bit bytes.
-static_assert(CHAR_BIT == 8)
+static_assert(CHAR_BIT == 8);
 
 int main()
 {
@@ -180,6 +180,7 @@ TODO
 
 ```c++
 #include <io>
+#include <iostream>
 
 struct MyType
 {
@@ -221,6 +222,9 @@ int main()
 ### Example 5: Working with user defined type (another approach)
 
 ```c++
+#include <io>
+#include <iostream>
+
 struct VendorType // Can't modify interface.
 {
 	int a;
