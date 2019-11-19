@@ -33,11 +33,11 @@ This proposal is based on ftz Serialization library which was initially written 
 * There was no portable way to determine the native endianness, especially since sizes of all fundamental types can be 1 and all fixed-width types are optional. This was fixed by `std::endian` in C++20.
 * There was no easy way to convert integers from native representation to two's complement and vice versa. This was fixed by requiring all integers to be two's complement in C++20.
 * There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
-* There is no easy way to convert floating point number from native represenation to ISO/IEC/IEEE 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [P1468](https://wg21.link/p1468) should fix this.
+* There is no easy way to convert floating point number from native represenation to ISO/IEC/IEEE 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [@P1468R2] should fix this.
 
 While the author thinks that having endianness and floating point convertion functions available publicly is a good idea, they leave them as implementation details in this paper.
 
-Thoughts on [Boost.Serialization](https://www.boost.org/doc/libs/1_69_0/libs/serialization/doc/index.html):
+Thoughts on [@BOOST.SERIALIZATION]:
 
 * It uses confusing operator overloading akin to standard text streams which leads to several problems such as unnecessary complexity of `>>` and `<<` returning a reference to the archive.
 * It doesn't support portable serialization of floating point values.
@@ -45,7 +45,7 @@ Thoughts on [Boost.Serialization](https://www.boost.org/doc/libs/1_69_0/libs/ser
 * Unfortunate macro to split `load` and `save` customization points.
 * It still uses standard text streams as archives.
 
-Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
+Thoughts on [@CEREAL]:
 
 * It decided to inherit several Boost problems for the sake of compatibility.
 * Strange `operator()` syntax for IO.
@@ -526,11 +526,12 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 * `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
-* Remove `std::io::floating_point_format` if P1468 is accepted.
+* Remove `std::io::floating_point_format` if [@P1468R2] is accepted.
+* Vectored IO.
 
 # Wording
 
-All text is relative to [n4830](https://wg21.link/n4830).
+All text is relative to [@N4830].
 
 Move clauses 29.1 - 29.10 into a new clause 29.2 "Legacy text IO".
 
@@ -2299,3 +2300,15 @@ streamsize write_some(span<const byte> buffer);
 *Returns:* The amount of bytes written.
 
 *Throws:* TODO
+
+---
+references:
+  - id: BOOST.SERIALIZATION
+    citation-label: Boost.Serialization
+    title: "Boost.Serialization"
+    URL: https://www.boost.org/doc/libs/1_69_0/libs/serialization/doc/index.html
+  - id: CEREAL
+    citation-label: Cereal
+    title: "Cereal"
+    URL: https://uscilab.github.io/cereal/index.html
+---
