@@ -527,6 +527,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if [@P1468R2] is accepted.
+* Binary versions of `std::cin`, `std::cout` and `std::cerr`.
 * Vectored IO.
 
 # Wording
