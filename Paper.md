@@ -559,13 +559,13 @@ class format;
 	
 enum class io_errc
 {
-	bad_file_descriptor = implementation-defined,
-	invalid_argument = implementation-defined,
-	value_too_large = implementation-defined,
-	reached_end_of_file = implementation-defined,
-	interrupted = implementation-defined,
-	physical_error = implementation-defined,
-	file_too_large = implementation-defined
+	bad_file_descriptor = @_implementation-defined_@,
+	invalid_argument = @_implementation-defined_@,
+	value_too_large = @_implementation-defined_@,
+	reached_end_of_file = @_implementation-defined_@,
+	interrupted = @_implementation-defined_@,
+	physical_error = @_implementation-defined_@,
+	file_too_large = @_implementation-defined_@
 };
 
 }
@@ -592,25 +592,25 @@ enum class base_position
 
 // Stream concepts
 template <typename T>
-concept stream_base = see below;
+concept stream_base = @_see below_@;
 template <typename T>
-concept seekable_stream = see below;
+concept seekable_stream = @_see below_@;
 template <typename T>
-concept input_stream = see below;
+concept input_stream = @_see below_@;
 template <typename T>
-concept output_stream = see below;
+concept output_stream = @_see below_@;
 template <typename T>
-concept stream = see below;
+concept stream = @_see below_@;
 
 // IO concepts
 template <typename T, typename S>
-concept customly_readable_from = see below;
+concept customly_readable_from = @_see below_@;
 template <typename T, typename S>
-concept customly_writable_to = see below;
+concept customly_writable_to = @_see below_@;
 
 // Customization points
-inline constexpr unspecified read = unspecified;
-inline constexpr unspecified write = unspecified;
+inline constexpr @_unspecified_@ read = @_unspecified_@;
+inline constexpr @_unspecified_@ write = @_unspecified_@;
 
 // Span streams
 class input_span_stream;
@@ -2033,7 +2033,7 @@ TODO
 class file_stream_base
 {
 public:
-	using native_handle_type = implementation-defined;
+	using native_handle_type = @_implementation-defined_@;
 	
 	// Format
 	format get_format() const noexcept;
