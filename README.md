@@ -2,7 +2,9 @@
 
 The source code is in [Paper.md](Paper.md).
 
-Use the [Michael Park's WG21 generator](https://github.com/mpark/wg21) to generate PDF:
+The generated PDF is [here](generated/Paper.pdf).
+
+## How to generate PDF yourself
 
 ```
 make Paper.md
