@@ -1,8 +1,14 @@
-# A proposal to add std::byte-based IO to C++
+---
+title: A proposal to add std::byte-based IO to C++
+document: DXXXXR0
+date: 2019-11-19
+audience: LEWGI
+author:
+  - name: Lyberta
+    email: <lyberta@lyberta.net>
+---
 
-Note: early draft.
-
-## Motivation
+# Motivation
 
 C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO but it has many drawbacks:
 
@@ -16,7 +22,7 @@ C++ has text streams for a long time. However, there is no comfortable way to re
 
 This proposal tries to fix all mentioned issues.
 
-## Prior art
+# Prior art
 
 This proposal is based on ftz Serialization library which was initially written in 2010 targeting C++98 and was gradually updated to C++20. In particular, the following problems were encountered:
 
@@ -44,7 +50,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * Doesn't support portable serialization of floating point values, but gives helpful `static_assert` in case of non-IEC platform.
 * Still uses standard text streams as archives.
 
-## Design goals
+# Design goals
 
 * Always use `std::byte` instead of `char` when meaning raw bytes. Avoid `char*`, `unsigned char*` and `void*`.
 * Do not do any text processing or hold any text-related data inside stream classes, even as template parameters.
@@ -52,7 +58,7 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
 * Support different endiannesses and floating point formats.
 * Stream classes should efficiently map to OS API in case of file IO.
 
-## Design decisions
+# Design decisions
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
 * The inheritance heirarchy of legacy text streams has been changed to concepts. Legacy base class templates have become the following concepts:
@@ -91,9 +97,9 @@ Thoughts on [Cereal](https://uscilab.github.io/cereal/index.html)
   * `get`, `read`, `put` and `write` member functions were removed in favor of `read_some` and `write_some`.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
-## Tutorial
+# Tutorial
 
-### Example 1: Writing integer with default format
+## Example 1: Writing integer with default format
 
 ```c++
 #include <io>
@@ -131,7 +137,7 @@ This is because `CHAR_BIT` is 8, `sizeof(unsigned int)` is 4 and `std::endian::n
 
 We can be more strict and have more portable layout:
 
-### Example 2: Writing integer with specific layout
+## Example 2: Writing integer with specific layout
 
 ```c++
 #include <cstdint>
@@ -172,11 +178,11 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 0 0 0 42
 ```
 
-### Example 3: Working with floating point numbers
+## Example 3: Working with floating point numbers
 
 TODO
 
-### Example 4: Working with user defined type
+## Example 4: Working with user defined type
 
 ```c++
 #include <io>
@@ -219,7 +225,7 @@ int main()
 }
 ```
 
-### Example 5: Working with user defined type (another approach)
+## Example 5: Working with user defined type (another approach)
 
 ```c++
 #include <io>
@@ -264,7 +270,7 @@ int main()
 }
 ```
 
-### Example 6: Working with enums
+## Example 6: Working with enums
 
 Enumerations are essentially strong integers. Therefore, serializing them is the same as integers and is done out-of-the-box by `std::io::write`. However, reading is not so simple since there is no language-level mechanism to iterate the valid values. For now you have to write non-member `read` function that will read the integer and manually check if it has a legal value. It is hopeful that the need to write such boilerplate code will be resolved by reflection in the future.
 
@@ -305,7 +311,7 @@ void read(std::io::input_stream auto& stream, MyEnum& my_enum)
 }
 ```
 
-### Example 7: Resource Interchange File Format
+## Example 7: Resource Interchange File Format
 
 There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
 
@@ -489,7 +495,7 @@ private:
 
 TODO: More tutorials? More explanations.
 
-## Implementation experience
+# Implementation experience
 
 The reference implementation is here: https://github.com/Lyberta/cpp-io-impl
 
@@ -505,20 +511,20 @@ Most of the proposal can be implemented in ISO C++. Low level conversions inside
 | `read_some`     | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
 | `write_some`    | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
 
-## Future work
+# Future work
 
 It is hopeful that `std::io::format` will be used to handle Unicode encoding schemes during file and network IO so Unicode layer will only need to handle encoding forms.
 
 This proposal doesn't rule out more low-level library that exposes complex details of modern operating systems. However, the design of this library has been intentionally kept as simple as possible to be novice-friendly.
 
-## Open issues
+# Open issues
 
 * `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if P1468 is accepted.
 
-## Wording
+# Wording
 
 All text is relative to [n4830](https://wg21.link/n4830).
 
@@ -526,11 +532,11 @@ Move clauses 29.1 - 29.10 into a new clause 29.2 "Legacy text IO".
 
 Add a new clause 29.1 "Binary IO".
 
-### 29.1.? General [io.general]
+## 29.1.? General [io.general]
 
 TODO
 
-### 29.1.? Header `<io>` synopsis [io.syn]
+## 29.1.? Header `<io>` synopsis [io.syn]
 
 ```c++
 namespace std
@@ -635,7 +641,7 @@ class file_stream;
 }
 ```
 
-### 29.1.? Class `format` [io.format]
+## 29.1.? Class `format` [io.format]
 
 ```c++
 class format final
@@ -664,7 +670,7 @@ private:
 
 TODO
 
-#### 29.1.?.? Constructor [io.format.cons]
+### 29.1.?.? Constructor [io.format.cons]
 
 ```c++
 constexpr format(endian endianness = endian::native,
@@ -674,7 +680,7 @@ constexpr format(endian endianness = endian::native,
 
 *Ensures:* `endianness_ == endianness` and `float_format_ == float_format`.
 
-#### 29.1.?.? Member functions [io.format.members]
+### 29.1.?.? Member functions [io.format.members]
 
 ```c++
 constexpr endian get_endianness() const noexcept;
@@ -701,7 +707,7 @@ constexpr void set_floating_point_format(floating_point_format new_format)
 
 *Ensures:* `float_format_ == new_format`.
 
-### 29.1.? Error handling [io.errors]
+## 29.1.? Error handling [io.errors]
 
 ```c++
 const error_category& category() noexcept;
@@ -723,7 +729,7 @@ error_condition make_error_condition(io_errc e) noexcept;
 
 *Returns:* `error_condition(static_cast<int>(e), io::category())`.
 
-### 29.1.? Class `io_error` [ioerr.ioerr]
+## 29.1.? Class `io_error` [ioerr.ioerr]
 
 ```c++
 class io_error : public system_error
@@ -736,9 +742,9 @@ public:
 
 TODO
 
-### 29.1.? Stream concepts [stream.concepts]
+## 29.1.? Stream concepts [stream.concepts]
 
-#### 29.1.?.? Concept `stream_base` [stream.concept.base]
+### 29.1.?.? Concept `stream_base` [stream.concept.base]
 
 ```c++
 template <typename T>
@@ -753,7 +759,7 @@ concept stream_base = requires(const T s)
 
 TODO
 
-##### 29.1.?.?.? Format [stream.base.format]
+#### 29.1.?.?.? Format [stream.base.format]
 
 ```c++
 format get_format() const noexcept;
@@ -767,7 +773,7 @@ void set_format(format f) noexcept;
 
 *Effects:* Sets the stream format to `f`.
 
-#### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
+### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
 
 ```c++
 template <typename T>
@@ -783,7 +789,7 @@ concept seekable_stream = requires(const T s)
 
 TODO
 
-##### 29.1.?.?.? Position [seekable.stream.position]
+#### 29.1.?.?.? Position [seekable.stream.position]
 
 ```c++
 streamoff get_position();
@@ -817,7 +823,7 @@ void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
 
-#### 29.1.?.? Concept `input_stream` [stream.concept.input]
+### 29.1.?.? Concept `input_stream` [stream.concept.input]
 
 ```c++
 template <typename T>
@@ -829,7 +835,7 @@ concept input_stream = stream_base<T> && requires(T s, span<byte> buffer)
 
 TODO
 
-##### 29.1.?.?.? Reading [input.stream.read]
+#### 29.1.?.?.? Reading [input.stream.read]
 
 ```c++
 streamsize read_some(span<byte> buffer);
@@ -847,7 +853,7 @@ streamsize read_some(span<byte> buffer);
 * `interrupted` - if reading was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
 
-#### 29.1.?.? Concept `output_stream` [stream.concept.output]
+### 29.1.?.? Concept `output_stream` [stream.concept.output]
 
 ```c++
 template <typename T>
@@ -859,7 +865,7 @@ concept output_stream = stream_base<T> && requires(T s, span<const byte> buffer)
 
 TODO
 
-##### 29.1.?.?.? Writing [output.stream.write]
+#### 29.1.?.?.? Writing [output.stream.write]
 
 ```c++
 streamsize write_some(span<const byte> buffer);
@@ -877,7 +883,7 @@ streamsize write_some(span<const byte> buffer);
 * `interrupted` - if writing was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
 
-#### 29.1.?.? Concept `stream` [stream.concept.stream???]
+### 29.1.?.? Concept `stream` [stream.concept.stream???]
 
 ```c++
 template <typename T>
@@ -886,9 +892,9 @@ concept stream = input_stream<T> && output_stream<T>;
 
 TODO
 
-### 29.1.? IO concepts [io.concepts]
+## 29.1.? IO concepts [io.concepts]
 
-#### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
+### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
 
 ```c++
 template <typename T, typename S>
@@ -902,7 +908,7 @@ concept customly_readable_from =
 
 TODO
 
-#### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
+### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
 
 ```c++
 template <typename T, typename S>
@@ -916,8 +922,8 @@ concept customly_writable_to =
 
 TODO
 
-### 29.1.? Customization points [???]
-#### 29.1.?.1 `io::read` [io.read]
+## 29.1.? Customization points [???]
+### 29.1.?.1 `io::read` [io.read]
 
 The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
@@ -931,7 +937,7 @@ The name `read` denotes a customization point object. The expression `io::read(S
 * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
 * If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
 
-#### 29.1.?.2 `io::write` [io.write]
+### 29.1.?.2 `io::write` [io.write]
 
 The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
@@ -945,9 +951,9 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
 * If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
 
-### 29.1.? Span streams [span.streams]
+## 29.1.? Span streams [span.streams]
 
-#### 29.1.?.1 Class `input_span_stream` [input.span.stream]
+### 29.1.?.1 Class `input_span_stream` [input.span.stream]
 
 ```c++
 class input_span_stream final
@@ -982,7 +988,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [input.span.stream.cons]
+#### 29.1.?.?.? Constructors [input.span.stream.cons]
 
 ```c++
 constexpr input_span_stream(format f = {}) noexcept;
@@ -1005,7 +1011,7 @@ constexpr input_span_stream(span<const byte> buffer, format f = {}) noexcept;
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-##### 29.1.?.?.? Format [input.span.stream.format]
+#### 29.1.?.?.? Format [input.span.stream.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -1019,7 +1025,7 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [input.span.stream.position]
+#### 29.1.?.?.? Position [input.span.stream.position]
 
 ```c++
 constexpr streamoff get_position() const noexcept;
@@ -1053,7 +1059,7 @@ constexpr void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
-##### 29.1.?.?.? Reading [input.span.stream.read]
+#### 29.1.?.?.? Reading [input.span.stream.read]
 
 ```c++
 constexpr streamsize read_some(span<byte> buffer);
@@ -1076,7 +1082,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 * `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
-##### 29.1.?.?.? Buffer management [input.span.stream.buffer]
+#### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
 ```c++
 constexpr span<const byte> get_buffer() const noexcept;
@@ -1094,7 +1100,7 @@ constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
 
-#### 29.1.?.2 Class `output_span_stream` [output.span.stream]
+### 29.1.?.2 Class `output_span_stream` [output.span.stream]
 
 ```c++
 class output_span_stream final
@@ -1128,7 +1134,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [output.span.stream.cons]
+#### 29.1.?.?.? Constructors [output.span.stream.cons]
 
 ```c++
 constexpr output_span_stream(format f = {}) noexcept;
@@ -1151,7 +1157,7 @@ constexpr output_span_stream(span<byte> buffer, format f = {}) noexcept;
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-##### 29.1.?.?.? Format [output.span.stream.format]
+#### 29.1.?.?.? Format [output.span.stream.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -1165,7 +1171,7 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [output.span.stream.position]
+#### 29.1.?.?.? Position [output.span.stream.position]
 
 ```c++
 constexpr streamoff get_position() const noexcept;
@@ -1199,7 +1205,7 @@ constexpr void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
-##### 29.1.?.?.? Writing [output.span.stream.write]
+#### 29.1.?.?.? Writing [output.span.stream.write]
 
 ```c++
 constexpr streamsize write_some(span<const byte> buffer);
@@ -1222,7 +1228,7 @@ After that writes that amount of bytes from the given buffer to the stream and a
 
 * `file_too_large` - if `!empty(buffer) && ((position_ == ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
-##### 29.1.?.?.? Buffer management [output.span.stream.buffer]
+#### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
 ```c++
 constexpr span<byte> get_buffer() const noexcept;
@@ -1240,7 +1246,7 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
 
-#### 29.1.?.3 Class `span_stream` [span.stream]
+### 29.1.?.3 Class `span_stream` [span.stream]
 
 ```c++
 class span_stream final
@@ -1277,7 +1283,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [span.stream.cons]
+#### 29.1.?.?.? Constructors [span.stream.cons]
 
 ```c++
 constexpr span_stream(format f = {}) noexcept;
@@ -1300,7 +1306,7 @@ constexpr span_stream(span<byte> buffer, format f = {}) noexcept;
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
 
-##### 29.1.?.?.? Format [span.stream.format]
+#### 29.1.?.?.? Format [span.stream.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -1314,7 +1320,7 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [output.span.stream.position]
+#### 29.1.?.?.? Position [output.span.stream.position]
 
 ```c++
 constexpr streamoff get_position() const noexcept;
@@ -1348,7 +1354,7 @@ constexpr void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
-##### 29.1.?.?.? Reading [span.stream.read]
+#### 29.1.?.?.? Reading [span.stream.read]
 
 ```c++
 constexpr streamsize read_some(span<byte> buffer);
@@ -1371,7 +1377,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 * `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
-##### 29.1.?.?.? Writing [span.stream.write]
+#### 29.1.?.?.? Writing [span.stream.write]
 
 ```c++
 constexpr streamsize write_some(span<const byte> buffer);
@@ -1394,7 +1400,7 @@ After that writes that amount of bytes from the given buffer to the stream and a
 
 * `file_too_large` - if `!empty(buffer) && ((position_ == ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
-##### 29.1.?.?.? Buffer management [span.stream.buffer]
+#### 29.1.?.?.? Buffer management [span.stream.buffer]
 
 ```c++
 constexpr span<byte> get_buffer() const noexcept;
@@ -1412,9 +1418,9 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 * `size(buffer_) == size(new_buffer)`,
 * `position_ == 0`.
 
-### 29.1.? Memory streams [memory.streams]
+## 29.1.? Memory streams [memory.streams]
 
-#### 29.1.?.1 Class template `basic_input_memory_stream` [input.memory.stream]
+### 29.1.?.1 Class template `basic_input_memory_stream` [input.memory.stream]
 
 ```c++
 template <typename Container>
@@ -1453,7 +1459,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [input.memory.stream.cons]
+#### 29.1.?.?.? Constructors [input.memory.stream.cons]
 
 ```c++
 constexpr basic_input_memory_stream(format f = {});
@@ -1487,7 +1493,7 @@ constexpr basic_input_memory_stream(Container&& c, format f = {});
 * `get_format() == f`,
 * `position_ == 0`.
 
-##### 29.1.?.?.? Format [input.memory.stream.format]
+#### 29.1.?.?.? Format [input.memory.stream.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -1501,7 +1507,7 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [input.memory.stream.position]
+#### 29.1.?.?.? Position [input.memory.stream.position]
 
 ```c++
 constexpr streamoff get_position() const noexcept;
@@ -1535,7 +1541,7 @@ constexpr void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
-##### 29.1.?.?.? Reading [input.memory.stream.read]
+#### 29.1.?.?.? Reading [input.memory.stream.read]
 
 ```c++
 constexpr streamsize read_some(span<byte> buffer);
@@ -1558,7 +1564,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 * `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
-##### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
+#### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
 ```c++
 constexpr const Container& get_buffer() const & noexcept;
@@ -1597,7 +1603,7 @@ constexpr void reset_buffer() noexcept;
 
 *Ensures:* `position_ == 0`.
 
-#### 29.1.?.2 Class template `basic_output_memory_stream` [output.memory.stream]
+### 29.1.?.2 Class template `basic_output_memory_stream` [output.memory.stream]
 
 ```c++
 template <typename Container>
@@ -1636,7 +1642,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [output.memory.stream.cons]
+#### 29.1.?.?.? Constructors [output.memory.stream.cons]
 
 ```c++
 constexpr basic_output_memory_stream(format f = {});
@@ -1670,7 +1676,7 @@ constexpr basic_output_memory_stream(Container&& c, format f = {});
 * `get_format() == f`,
 * `position_ == 0`.
 
-##### 29.1.?.?.? Format [output.memory.stream.format]
+#### 29.1.?.?.? Format [output.memory.stream.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -1684,7 +1690,7 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [output.memory.stream.position]
+#### 29.1.?.?.? Position [output.memory.stream.position]
 
 ```c++
 constexpr streamoff get_position() const noexcept;
@@ -1718,7 +1724,7 @@ constexpr void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
-##### 29.1.?.?.? Writing [output.memory.stream.write]
+#### 29.1.?.?.? Writing [output.memory.stream.write]
 
 ```c++
 constexpr streamsize write_some(span<const byte> buffer);
@@ -1751,7 +1757,7 @@ Otherwise:
 
 * `file_too_large` - if `!empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
-##### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
+#### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
 ```c++
 constexpr const Container& get_buffer() const & noexcept;
@@ -1790,7 +1796,7 @@ constexpr void reset_buffer() noexcept;
 
 *Ensures:* `position_ == 0`.
 
-#### 29.1.?.3 Class template `basic_memory_stream` [memory.stream]
+### 29.1.?.3 Class template `basic_memory_stream` [memory.stream]
 
 ```c++
 template <typename Container>
@@ -1832,7 +1838,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [memory.stream.cons]
+#### 29.1.?.?.? Constructors [memory.stream.cons]
 
 ```c++
 constexpr basic_memory_stream(format f = {});
@@ -1866,7 +1872,7 @@ constexpr basic_memory_stream(Container&& c, format f = {});
 * `get_format() == f`,
 * `position_ == 0`.
 
-##### 29.1.?.?.? Format [memory.stream.format]
+#### 29.1.?.?.? Format [memory.stream.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -1880,7 +1886,7 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [memory.stream.position]
+#### 29.1.?.?.? Position [memory.stream.position]
 
 ```c++
 constexpr streamoff get_position();
@@ -1914,7 +1920,7 @@ constexpr void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
-##### 29.1.?.?.? Reading [memory.stream.read]
+#### 29.1.?.?.? Reading [memory.stream.read]
 
 ```c++
 constexpr streamsize read_some(span<byte> buffer);
@@ -1937,7 +1943,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 * `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
-##### 29.1.?.?.? Writing [memory.stream.write]
+#### 29.1.?.?.? Writing [memory.stream.write]
 
 ```c++
 constexpr streamsize write_some(span<const byte> buffer);
@@ -1970,7 +1976,7 @@ Otherwise:
 
 * `file_too_large` - if `!empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
-##### 29.1.?.?.? Buffer management [memory.stream.buffer]
+#### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
 ```c++
 constexpr const Container& get_buffer() const & noexcept;
@@ -2009,13 +2015,13 @@ constexpr void reset_buffer() noexcept;
 
 *Ensures:* `position_ == 0`.
 
-### 29.1.? File streams [file.streams???] (naming conflict)
+## 29.1.? File streams [file.streams???] (naming conflict)
 
-#### 29.1.?.? Native handles [file.streams.native]
+### 29.1.?.? Native handles [file.streams.native]
 
 TODO
 
-#### 29.1.?.? Class `file_stream_base` [file.stream.base]
+### 29.1.?.? Class `file_stream_base` [file.stream.base]
 
 ```c++
 
@@ -2054,7 +2060,7 @@ private:
 
 TODO
 
-##### 29.1.?.?.? Constructors [file.stream.base.cons]
+#### 29.1.?.?.? Constructors [file.stream.base.cons]
 
 ```c++
 file_stream_base(format f = {}) noexcept;
@@ -2085,7 +2091,7 @@ file_stream_base(native_handle_type handle, format f = {});
 
 *Throws:* TODO
 
-##### 29.1.?.?.? Format [file.stream.base.format]
+#### 29.1.?.?.? Format [file.stream.base.format]
 
 ```c++
 format get_format() const noexcept;
@@ -2099,7 +2105,7 @@ void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-##### 29.1.?.?.? Position [file.stream.base.position]
+#### 29.1.?.?.? Position [file.stream.base.position]
 
 ```c++
 streamoff get_position() const;
@@ -2125,7 +2131,7 @@ void seek_position(base_position base, streamoff offset);
 
 *Throws:* TODO
 
-#### 29.1.?.? Class `input_file_stream` [input.file.stream]
+### 29.1.?.? Class `input_file_stream` [input.file.stream]
 
 ```c++
 class input_file_stream final : public file_stream_base
@@ -2143,7 +2149,7 @@ public:
 
 TODO
 
-##### 29.1.?.?.? Constructors [input.file.stream.cons]
+#### 29.1.?.?.? Constructors [input.file.stream.cons]
 
 ```c++
 input_file_stream(format f = {}) noexcept;
@@ -2163,7 +2169,7 @@ input_file_stream(native_handle_type handle, format f = {});
 
 *Effects:* Initializes the base class with `file_stream_base(handle, f)`.
 
-##### 29.1.?.?.? Reading [input.file.stream.read]
+#### 29.1.?.?.? Reading [input.file.stream.read]
 
 ```c++
 streamsize read_some(span<byte> buffer);
@@ -2175,7 +2181,7 @@ streamsize read_some(span<byte> buffer);
 
 *Throws:* TODO
 
-#### 29.1.?.? Class `output_file_stream` [output.file.stream]
+### 29.1.?.? Class `output_file_stream` [output.file.stream]
 
 ```c++
 class output_file_stream final : public file_stream_base
@@ -2193,7 +2199,7 @@ public:
 
 TODO
 
-##### 29.1.?.?.? Constructors [output.file.stream.cons]
+#### 29.1.?.?.? Constructors [output.file.stream.cons]
 
 ```c++
 output_file_stream(format f = {}) noexcept;
@@ -2213,7 +2219,7 @@ output_file_stream(native_handle_type handle, format f = {});
 
 *Effects:* Initializes the base class with `file_stream_base(handle, f)`.
 
-##### 29.1.?.?.? Writing [output.file.stream.write]
+#### 29.1.?.?.? Writing [output.file.stream.write]
 
 ```c++
 streamsize write_some(span<const byte> buffer);
@@ -2225,7 +2231,7 @@ streamsize write_some(span<const byte> buffer);
 
 *Throws:* TODO
 
-#### 29.1.?.? Class `file_stream` [file.stream]
+### 29.1.?.? Class `file_stream` [file.stream]
 
 ```c++
 class file_stream final : public file_stream_base
@@ -2246,7 +2252,7 @@ public:
 
 TODO
 
-##### 29.1.?.?.? Constructors [file.stream.cons]
+#### 29.1.?.?.? Constructors [file.stream.cons]
 
 ```c++
 file_stream(format f = {}) noexcept;
@@ -2266,7 +2272,7 @@ file_stream(native_handle_type handle, format f = {});
 
 *Effects:* Initializes the base class with `file_stream_base(handle, f)`.
 
-##### 29.1.?.?.? Reading [file.stream.read]
+#### 29.1.?.?.? Reading [file.stream.read]
 
 ```c++
 streamsize read_some(span<byte> buffer);
@@ -2278,7 +2284,7 @@ streamsize read_some(span<byte> buffer);
 
 *Throws:* TODO
 
-##### 29.1.?.?.? Writing [file.stream.write]
+#### 29.1.?.?.? Writing [file.stream.write]
 
 ```c++
 streamsize write_some(span<const byte> buffer);
