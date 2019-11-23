@@ -199,13 +199,13 @@ struct MyType
 	int a;
 	float b;
 
-	void read(std::io::input_stream auto& stream)
+	void read(std::io::formatted_input_stream auto& stream)
 	{
 		std::io::read(stream, a);
 		std::io::read(stream, b);
 	}
 
-	void write(std::io::output_stream auto& stream) const
+	void write(std::io::formatted_output_stream auto& stream) const
 	{
 		std::io::write(stream, a);
 		std::io::write(stream, b);
@@ -245,13 +245,13 @@ struct VendorType // Can't modify interface.
 
 // Add "read" and "write" as free functions. They will be picked up
 // automatically.
-void read(std::io::input_stream auto& stream, VendorType& vt)
+void read(std::io::formatted_input_stream auto& stream, VendorType& vt)
 {
 	std::io::read(stream, vt.a);
 	std::io::read(stream, vt.b);
 }
 
-void write(std::io::output_stream auto& stream, const VendorType& vt)
+void write(std::io::formatted_output_stream auto& stream, const VendorType& vt)
 {
 	std::io::write(stream, vt.a);
 	std::io::write(stream, vt.b);
@@ -287,7 +287,7 @@ enum class MyEnum
 	Bar
 };
 
-void read(std::io::input_stream auto& stream, MyEnum& my_enum)
+void read(std::io::formatted_input_stream auto& stream, MyEnum& my_enum)
 {
 	// Create a raw integer that is the same type as underlying type of our
 	// enumeration.
@@ -342,14 +342,14 @@ struct Chunk
 	std::vector<std::byte> data;
 	
 	template <typename S>
-	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
 	Chunk(S& stream)
 	{
 		this->read(stream);
 	}
 	
 	template <typename S>
-	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
 	void read(S& stream)
 	{
 		// Read the ID of the chunk.
@@ -367,7 +367,7 @@ struct Chunk
 		}
 	}
 	
-	void write(std::io::output_stream auto& stream) const
+	void write(std::io::formatted_output_stream auto& stream) const
 	{
 		// Write the ID of the chunk.
 		std::io::write(stream, id);
@@ -406,14 +406,14 @@ class File
 {
 public:
 	template <typename S>
-	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
 	File(S& stream)
 	{
 		this->read(stream);
 	}
 
 	template <typename S>
-	requires std::io::input_stream<S> && std::io::seekable_stream<S>
+	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
 	void read(S& stream)
 	{
 		// Read the main chunk ID.
@@ -454,7 +454,7 @@ public:
 		}
 	}
 	
-	void write(std::io::output_stream auto& stream) const
+	void write(std::io::formatted_output_stream auto& stream) const
 	{
 		// Set the endianness of the stream.
 		auto format = stream.get_format();
@@ -595,15 +595,17 @@ enum class base_position
 
 // Stream concepts
 template <typename T>
-concept formatted_stream = @_see below_@;
-template <typename T>
 concept seekable_stream = @_see below_@;
 template <typename T>
 concept input_stream = @_see below_@;
 template <typename T>
 concept output_stream = @_see below_@;
 template <typename T>
-concept stream = @_see below_@;
+concept formatted_stream = @_see below_@;
+template <typename T>
+concept formatted_input_stream = @_see below_@;
+template <typename T>
+concept formatted_output_stream = @_see below_@;
 
 // IO concepts
 template <typename T, typename S>
@@ -752,35 +754,6 @@ TODO
 
 ## 29.1.? Stream concepts [stream.concepts]
 
-### 29.1.?.? Concept `formatted_stream` [stream.concept.formatted]
-
-```c++
-template <typename T>
-concept formatted_stream = requires(const T s)
-	{
-		{s.get_format()} -> same_as<format>;
-	} && requires(T s, format f)
-	{
-		s.set_format(f);
-	};
-```
-
-TODO
-
-#### 29.1.?.?.? Format [stream.base.format]
-
-```c++
-format get_format() const noexcept;
-```
-
-*Returns:* Stream format.
-
-```c++
-void set_format(format f) noexcept;
-```
-
-*Effects:* Sets the stream format to `f`.
-
 ### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
 
 ```c++
@@ -891,11 +864,49 @@ streamsize write_some(span<const byte> buffer);
 * `interrupted` - if writing was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
 
-### 29.1.?.? Concept `stream` [stream.concept.stream???]
+### 29.1.?.? Concept `formatted_stream` [stream.concept.formatted]
 
 ```c++
 template <typename T>
-concept stream = input_stream<T> && output_stream<T>;
+concept formatted_stream = requires(const T s)
+	{
+		{s.get_format()} -> same_as<format>;
+	} && requires(T s, format f)
+	{
+		s.set_format(f);
+	};
+```
+
+TODO
+
+#### 29.1.?.?.? Format [stream.base.format]
+
+```c++
+format get_format() const noexcept;
+```
+
+*Returns:* Stream format.
+
+```c++
+void set_format(format f) noexcept;
+```
+
+*Effects:* Sets the stream format to `f`.
+
+### 29.1.?.? Concept `formatted_input_stream` [stream.concept.input.formatted]
+
+```c++
+template <typename T>
+concept formatted_input_stream = input_stream<T> && formatted_stream<T>;
+```
+
+TODO
+
+### 29.1.?.? Concept `formatted_output_stream` [stream.concept.output.formatted]
+
+```c++
+template <typename T>
+concept formatted_output_stream = output_stream<T> && formatted_stream<T>;
 ```
 
 TODO
@@ -941,10 +952,10 @@ The name `read` denotes a customization point object. The expression `io::read(S
 * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
 * If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
 * If `T` is `integral` and:
-  * `U` is not `formatted_stream`, `io::read(S, E)` is ill-formed.
+  * `U` is not `formatted_input_stream`, `io::read(S, E)` is ill-formed.
   * Otherwise, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
 * If `T` is `floating_point` and:
-  * `U` is not `formatted_stream`, `io::read(S, E)` is ill-formed.
+  * `U` is not `formatted_input_stream`, `io::read(S, E)` is ill-formed.
   * Otherwise, reads `sizeof(T)` bytes from the stream and:
     * If stream floating point format is `native`, assigns the bytes to the object representation of `E`.
     * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
@@ -959,10 +970,10 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
 * If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
 * If `T` is `integral` or an enumeration type and:
-  * `U` is not `formatted_stream`, `io::write(S, E)` is ill-formed.
+  * `U` is not `formatted_output_stream`, `io::write(S, E)` is ill-formed.
   * Otherwise, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
 * If `T` is `floating_point` and:
-  * `U` is not `formatted_stream`, `io::write(S, E)` is ill-formed.
+  * `U` is not `formatted_output_stream`, `io::write(S, E)` is ill-formed.
   * Otherwise:
     * If stream floating point format is `native`, writes the object representation of `E` to the stream.
     * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
