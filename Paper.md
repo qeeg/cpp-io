@@ -264,7 +264,7 @@ int main()
 
 	// std::io::write will automatically pickup "write" non-member function if
 	// it has a valid signature.
-	std::io::write(s, t);
+	std::io::write(s, vt);
 
 	const auto& buffer = s.get_buffer();
 
