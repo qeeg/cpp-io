@@ -636,10 +636,17 @@ using memory_stream = basic_memory_stream<vector<byte>>;
 
 // File streams
 
-enum class open_mode
+enum class mode
 {
 	read,
 	write
+};
+
+enum class creation
+{
+	open_existing,
+	if_needed,
+	truncate_existing
 };
 
 class file_stream_base;
@@ -2073,7 +2080,7 @@ public:
 protected:
 	// Construct/copy/destroy
 	file_stream_base(format f = {}) noexcept;
-	file_stream_base(const filesystem::path& file_name, open_mode mode,
+	file_stream_base(const filesystem::path& file_name, mode mode, creation c,
 		format f = {});
 	file_stream_base(native_handle_type handle, format f = {});
 	file_stream_base(const file_stream_base&) = delete;
@@ -2098,7 +2105,7 @@ file_stream_base(format f = {}) noexcept;
 *Ensures:* `format_ == f`.
 
 ```c++
-file_stream_base(const filesystem::path& file_name, open_mode mode,
+file_stream_base(const filesystem::path& file_name, mode mode, creation c,
 	format f = {});
 ```
 
@@ -2188,7 +2195,7 @@ input_file_stream(format f = {}) noexcept;
 input_file_stream(const filesystem::path& file_name, format f = {});
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(handle, open_mode::read, f)`.
+*Effects:* Initializes the base class with `file_stream_base(file_name, mode::read, creation::open_existing, f)`.
 
 ```c++
 input_file_stream(native_handle_type handle, format f = {});
@@ -2216,7 +2223,8 @@ class output_file_stream final : public file_stream_base
 public:
 	// Construct/copy/destroy
 	output_file_stream(format f = {}) noexcept;
-	output_file_stream(const filesystem::path& file_name, format f = {});
+	output_file_stream(const filesystem::path& file_name,
+		creation c = creation::if_needed, format f = {});
 	output_file_stream(native_handle_type handle, format f = {});
 
 	// Writing
@@ -2235,10 +2243,11 @@ output_file_stream(format f = {}) noexcept;
 *Effects:* Initializes the base class with `file_stream_base(f)`.
 
 ```c++
-output_file_stream(const filesystem::path& file_name, format f = {});
+output_file_stream(const filesystem::path& file_name,
+	creation c = creation::if_needed, format f = {});
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(handle, open_mode::write, f)`.
+*Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c, f)`.
 
 ```c++
 output_file_stream(native_handle_type handle, format f = {});
@@ -2266,7 +2275,8 @@ class file_stream final : public file_stream_base
 public:
 	// Construct/copy/destroy
 	file_stream(format f = {}) noexcept;
-	file_stream(const filesystem::path& file_name, format f = {});
+	file_stream(const filesystem::path& file_name,
+		creation c = creation::if_needed, format f = {});
 	file_stream(native_handle_type handle, format f = {});
 
 	// Reading
@@ -2288,10 +2298,11 @@ file_stream(format f = {}) noexcept;
 *Effects:* Initializes the base class with `file_stream_base(f)`.
 
 ```c++
-file_stream(const filesystem::path& file_name, format f = {});
+file_stream(const filesystem::path& file_name, creation c = creation::if_needed,
+	format f = {});
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(handle, open_mode::write, f)`.
+*Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c, f)`.
 
 ```c++
 file_stream(native_handle_type handle, format f = {});
