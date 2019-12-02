@@ -17,11 +17,11 @@ This paper proposes fundamental IO concepts, customization points for serializat
 C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO but it has many drawbacks:
 
 * The API still works in terms of `char` which means `reinterpret_cast` if you use `std::byte` in your code base.
-* Streams operate in terms of `std::char_traits` which makes no sense when doing binary IO. In particular, `std::ios::pos_type` is a very painful type to work with but is required in many IO operations.
-* Stream open mode doesn't make a lot of sense and you'd always want to make sure to force it to have `std::ios_base::binary`.
+* Streams operate in terms of `std::char_traits` which is not needed when doing binary IO and only complicates the API. In particular, `std::ios::pos_type` is a very painful type to work with but is required in many IO operations.
+* Stream open mode is badly designed and you'd always want to make sure to force it to have `std::ios_base::binary`.
 * Stream objects carry a lot of text formatting flags that are irrelevant when doing binary IO. This leads to wasted memory.
 * By default, stream operations don't throw exceptions. This usually means some wrapper code to force exceptions.
-* If you want to do IO in memory, you're stuck with string streams that operate using `std::string`. Most binary data is stored in `std::vector` which leads to awful performance due to unnecessary copies.
+* If you want to do IO in memory, you're stuck with string streams that operate using `std::string`. Most binary data is stored in `std::vector<std::byte>` which leads to loss of performance due to unnecessary copies.
 * There is no agreed standard for customization points for binary IO.
 
 This proposal tries to fix all mentioned issues.
@@ -34,8 +34,8 @@ This proposal is based on ftz Serialization library which was initially written 
 * There was no sound way to express a range of bytes. This was fixed by `std::span` in C++20.
 * There was no portable way to determine the native endianness, especially since sizes of all fundamental types can be 1 and all fixed-width types are optional. This was fixed by `std::endian` in C++20.
 * There was no easy way to convert integers from native representation to two's complement and vice versa. This was fixed by requiring all integers to be two's complement in C++20.
-* There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
-* There is no easy way to convert floating point number from native represenation to ISO/IEC/IEEE 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [@P1468R2] should fix this.
+* There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal ([@P1272R2])but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
+* There is no easy way to convert floating point number from native represenation to ISO/IEC 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [@P1468R2] should fix this.
 
 While the author thinks that having endianness and floating point convertion functions available publicly is a good idea, they leave them as implementation details in this paper.
 
@@ -67,11 +67,13 @@ Thoughts on [@CEREAL]:
 # Design decisions
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
-* The inheritance heirarchy of legacy text streams has been changed to concepts. Legacy base class templates have become the following concepts:
-  * `std::ios_base` and `std::basic_ios` -> `std::io::stream_base`.
-  * `std::basic_istream` -> `std::io::input_stream`.
-  * `std::basic_ostream` -> `std::io::output_stream`.
-  * `std::basic_stream` -> `std::io::stream`.
+* The inheritance heirarchy of legacy text streams has been transformed to concepts that use more flat composition of features than inheritance tree. Legacy base class templates have been loosely transformed into the following concepts:
+  * `std::ios_base` -> `std::io::formatted_stream`.
+  * `std::basic_istream` -> `std::io::formatted_input_stream`.
+  * `std::basic_ostream` -> `std::io::formatted_output_stream`.
+* New concepts:
+  * Seeking functionality has been moved to `std::io::seekable_stream`.
+  * New concepts for pure unformatted IO: `std::io::input_stream` and `std::io::output_stream`.
 * Concrete class templates have been renamed as follows:
   * `std::basic_istringstream` -> `std::io::basic_input_memory_stream`.
   * `std::basic_ostringstream` -> `std::io::basic_output_memory_stream`.
@@ -87,7 +89,8 @@ Thoughts on [@CEREAL]:
 * Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
 * All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The separate class is used in order to make the change of stream format atomic.
 * Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and almost always start chunks of data with size, any kind of IO error is usually unrecoverable.
-* Since there is no more buffering because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
+* `std::ios_base::openmode` has been split into `std::io::mode` and `std::io::creation` that are modeled after the ones from [@P1031R2].
+* Since there is no more buffering (as of this revision) because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
   * Double argument versions of `seekg` and `seekp` -> `seek_position`.
@@ -535,7 +538,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 # Wording
 
-All text is relative to [@N4830].
+All text is relative to [@N4835].
 
 Move clauses 29.1 - 29.10 into a new clause 29.2 "Legacy text IO".
 
