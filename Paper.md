@@ -503,7 +503,7 @@ TODO: More tutorials? More explanations.
 
 # Implementation experience
 
-The reference implementation is here: https://github.com/Lyberta/cpp-io-impl
+The reference implementation is here: [@IMPL]
 
 Most of the proposal can be implemented in ISO C++. Low level conversions inside `std::io::read` and `std::io::write` require knowledge of implementation defined format of integers and floating point numbers. File IO requires calling operating system API. The following table provides some examples:
 
@@ -529,6 +529,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if [@P1468R2] is accepted.
+* Buffering for file IO.
 * Binary versions of `std::cin`, `std::cout` and `std::cerr`.
 * Vectored IO.
 
@@ -2344,4 +2345,8 @@ references:
     citation-label: Cereal
     title: "Cereal"
     URL: https://uscilab.github.io/cereal/index.html
+  - id : IMPL
+    citation-label: cpp-io-impl
+    title: Implementation of proposal to add std::byte-based IO to C++
+    URL: https://github.com/Lyberta/cpp-io-impl
 ---
