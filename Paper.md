@@ -1,5 +1,5 @@
 ---
-title: A proposal to add std::byte-based IO to C++
+title: Modern std::byte stream IO for C++
 document: DXXXXR0
 date: 2019-11-19
 audience: LEWGI
@@ -16,7 +16,7 @@ This paper proposes fundamental IO concepts, customization points for serializat
 
 C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO but it has many drawbacks:
 
-* The API still works in terms of `char` which means `reinterpret_cast` if you use `std::byte` in your code base.
+* The API still works in terms of `char` so if you use `std::byte` in your code base, you have to `reinterpret_cast` when calling `read` and `write` member functions of streams.
 * Streams operate in terms of `std::char_traits` which is not needed when doing binary IO and only complicates the API. In particular, `std::ios::pos_type` is a very painful type to work with but is required in many IO operations.
 * Stream open mode is badly designed and you'd always want to make sure to force it to have `std::ios_base::binary`.
 * Stream objects carry a lot of text formatting flags that are irrelevant when doing binary IO. This leads to wasted memory.

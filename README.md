@@ -1,4 +1,4 @@
-# A proposal to add std::byte-based IO to C++
+# Modern std::byte stream IO for C++
 
 The source code is in [Paper.md](Paper.md).
 
