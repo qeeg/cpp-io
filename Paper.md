@@ -535,6 +535,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 * Buffering for file IO.
 * Binary versions of `std::cin`, `std::cout` and `std::cerr`.
 * Vectored IO.
+* `constexpr` file streams as a generalization of `std::embed`.
 
 # Wording
 
@@ -2350,6 +2351,6 @@ references:
     URL: https://uscilab.github.io/cereal/index.html
   - id : IMPL
     citation-label: cpp-io-impl
-    title: Implementation of proposal to add std::byte-based IO to C++
+    title: Implementation of modern std::byte stream IO for C++
     URL: https://github.com/Lyberta/cpp-io-impl
 ---
