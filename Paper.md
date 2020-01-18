@@ -34,7 +34,7 @@ This proposal is based on ftz Serialization library which was initially written 
 * There was no sound way to express a range of bytes. This was fixed by `std::span` in C++20.
 * There was no portable way to determine the native endianness, especially since sizes of all fundamental types can be 1 and all fixed-width types are optional. This was fixed by `std::endian` in C++20.
 * There was no easy way to convert integers from native representation to two's complement and vice versa. This was fixed by requiring all integers to be two's complement in C++20.
-* There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal ([@P1272R2])but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
+* There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal ([@P1272R2]) but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
 * There is no easy way to convert floating point number from native represenation to ISO/IEC 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [@P1468R2] should fix this.
 
 While the author thinks that having endianness and floating point convertion functions available publicly is a good idea, they leave them as implementation details in this paper.
@@ -68,13 +68,10 @@ Thoughts on [@CEREAL]:
 
 * It was chosen to put all new types into separate namespace `std::io`. This follows the model ranges took where they define more modern versions of old facilities inside a new namespace.
 * The inheritance heirarchy of legacy text streams has been transformed to concepts that use more flat composition of features than inheritance tree. Legacy base class templates have been loosely transformed into the following concepts:
-  * `std::ios_base` -> `std::io::formatted_stream`.
-  * `std::basic_istream` -> `std::io::formatted_input_stream`.
-  * `std::basic_ostream` -> `std::io::formatted_output_stream`.
-* New concepts:
+  * `std::basic_istream` -> `std::io::input_stream`.
+  * `std::basic_ostream` -> `std::io::output_stream`.
   * Seeking functionality has been moved to `std::io::seekable_stream`.
-  * New concepts for pure unformatted IO: `std::io::input_stream` and `std::io::output_stream`.
-* Concrete class templates have been renamed as follows:
+* Concrete class templates have been transformed as follows:
   * `std::basic_istringstream` -> `std::io::basic_input_memory_stream`.
   * `std::basic_ostringstream` -> `std::io::basic_output_memory_stream`.
   * `std::basic_stringstream` -> `std::io::basic_memory_stream`.
@@ -87,7 +84,7 @@ Thoughts on [@CEREAL]:
   * `std::io::output_span_stream`.
   * `std::io::span_stream`.
 * Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
-* All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The separate class is used in order to make the change of stream format atomic.
+* All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The format is no longer a part of stream classes but is constructed on demand during [de]serialization as part of `std::io::context`.
 * Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and almost always start chunks of data with size, any kind of IO error is usually unrecoverable.
 * `std::ios_base::openmode` has been split into `std::io::mode` and `std::io::creation` that are modeled after the ones from [@P1031R2].
 * Since there is no more buffering (as of this revision) because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
@@ -119,13 +116,13 @@ int main()
 	unsigned int value = 42;
 
 	// Create a stream. This stream will write to dynamically allocated memory.
-	std::io::output_memory_stream s;
+	std::io::output_memory_stream stream;
 
 	// Write the value to the stream.
-	std::io::write(s, value);
+	std::io::write(stream, value);
 
 	// Get reference to the buffer of the stream.
-	const auto& buffer = s.get_buffer();
+	const auto& buffer = stream.get_buffer();
 
 	// Print the buffer.
 	for (auto byte : buffer)
@@ -159,19 +156,18 @@ static_assert(CHAR_BIT == 8);
 int main()
 {
 	std::uint32_t value = 42;
+	
+	std::io::output_memory_stream stream;
 
 	// Create a specific binary format.
 	// Here we want our data in the stream to be in big endian byte order.
-	std::io::format f{std::endian::big};
+	std::io::format format{std::endian::big};
 
-	// Create a stream with our format.
-	std::io::output_memory_stream s{f};
-
-	// Write the value to the stream.
+	// Write the value to the stream using our format.
 	// This will perform endianness conversion on non-big-endian systems.
-	std::io::write(s, value);
+	std::io::write(stream, value, format);
 
-	const auto& buffer = s.get_buffer();
+	const auto& buffer = stream.get_buffer();
 
 	for (auto byte : buffer)
 	{
@@ -202,29 +198,29 @@ struct MyType
 	int a;
 	float b;
 
-	void read(std::io::formatted_input_stream auto& stream)
+	void read(std::io::input_context<auto> context)
 	{
-		std::io::read(stream, a);
-		std::io::read(stream, b);
+		std::io::read(context, a);
+		std::io::read(context, b);
 	}
 
-	void write(std::io::formatted_output_stream auto& stream) const
+	void write(std::io::output_context<auto> context) const
 	{
-		std::io::write(stream, a);
-		std::io::write(stream, b);
+		std::io::write(context, a);
+		std::io::write(context, b);
 	}
 };
 
 int main()
 {
 	MyType t{1, 2.0f};
-	std::io::output_memory_stream s;
+	std::io::output_memory_stream stream;
 
 	// std::io::write will automatically pickup "write" member function if it
 	// has a valid signature.
-	std::io::write(s, t);
+	std::io::write(stream, t);
 
-	const auto& buffer = s.get_buffer();
+	const auto& buffer = stream.get_buffer();
 
 	for (auto byte : buffer)
 	{
@@ -248,28 +244,28 @@ struct VendorType // Can't modify interface.
 
 // Add "read" and "write" as free functions. They will be picked up
 // automatically.
-void read(std::io::formatted_input_stream auto& stream, VendorType& vt)
+void read(std::io::input_context<auto> context, VendorType& vt)
 {
-	std::io::read(stream, vt.a);
-	std::io::read(stream, vt.b);
+	std::io::read(context, vt.a);
+	std::io::read(context, vt.b);
 }
 
-void write(std::io::formatted_output_stream auto& stream, const VendorType& vt)
+void write(std::io::output_context<auto> context, const VendorType& vt)
 {
-	std::io::write(stream, vt.a);
-	std::io::write(stream, vt.b);
+	std::io::write(context, vt.a);
+	std::io::write(context, vt.b);
 }
 
 int main()
 {
 	VendorType vt{1, 2.0f};
-	std::io::output_memory_stream s;
+	std::io::output_memory_stream stream;
 
 	// std::io::write will automatically pickup "write" non-member function if
 	// it has a valid signature.
-	std::io::write(s, vt);
+	std::io::write(stream, vt);
 
-	const auto& buffer = s.get_buffer();
+	const auto& buffer = stream.get_buffer();
 
 	for (auto byte : buffer)
 	{
@@ -290,14 +286,14 @@ enum class MyEnum
 	Bar
 };
 
-void read(std::io::formatted_input_stream auto& stream, MyEnum& my_enum)
+void read(std::io::input_context<auto> context, MyEnum& my_enum)
 {
 	// Create a raw integer that is the same type as underlying type of our
 	// enumeration.
 	std::underlying_type_t<MyEnum> raw;
 	
 	// Read the integer from the stream.
-	std::io::read(stream, raw);
+	std::io::read(context, raw);
 	
 	// Cast it to our enumeration.
 	my_enum = static_cast<MyEnum>(raw);
@@ -344,46 +340,45 @@ struct Chunk
 	ID id;
 	std::vector<std::byte> data;
 	
-	template <typename S>
-	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
-	Chunk(S& stream)
+	template <std::io::seekable_stream S>
+	Chunk(std::io::input_context<S> context)
 	{
-		this->read(stream);
+		this->read(context);
 	}
 	
-	template <typename S>
-	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
-	void read(S& stream)
+	template <std::io::seekable_stream S>
+	void read(std::io::input_context<S> context)
 	{
 		// Read the ID of the chunk.
-		std::io::read(stream, id);
+		std::io::read(context, id);
 		// Read the size of the chunk.
 		Size size;
-		std::io::read(stream, size);
+		std::io::read(context, size);
 		// Read the data of the chunk.
 		data.resize(size);
-		std::io::read(stream, data);
+		std::io::read(context, data);
 		// Skip padding.
 		if (size % 2 == 1)
 		{
-			stream.seek_position(std::io::base_position::current, 1);
+			context.get_stream().seek_position(std::io::base_position::current,
+				1);
 		}
 	}
 	
-	void write(std::io::formatted_output_stream auto& stream) const
+	void write(std::io::output_context<auto> context) const
 	{
 		// Write the ID of the chunk.
-		std::io::write(stream, id);
+		std::io::write(context, id);
 		// Write the size of the chunk.
 		Size size = std::size(data); // Production code would make sure there is
 		// no overflow here.
-		std::io::write(stream, size);
+		std::io::write(context, size);
 		// Write the data of the chunk.
-		std::io::write(stream, data);
+		std::io::write(context, data);
 		// Write padding.
 		if (size % 2 == 1)
 		{
-			std::io::write(stream, std::byte{0});
+			std::io::write(context, std::byte{0});
 		}
 	}
 	
@@ -408,20 +403,18 @@ constexpr Chunk::ID BigEndianFile{
 class File
 {
 public:
-	template <typename S>
-	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
-	File(S& stream)
+	template <std::io::seekable_stream S>
+	File(std::io::input_context<S> context)
 	{
-		this->read(stream);
+		this->read(context);
 	}
 
-	template <typename S>
-	requires std::io::formatted_input_stream<S> && std::io::seekable_stream<S>
-	void read(S& stream)
+	template <std::io::seekable_stream S>
+	void read(std::io::input_context<S> context)
 	{
 		// Read the main chunk ID.
 		Chunk::ID chunk_id;
-		std::io::read(stream, chunk_id);
+		std::io::read(context, chunk_id);
 		if (chunk_id == LittleEndianFile)
 		{
 			// We have little endian file.
@@ -436,41 +429,42 @@ public:
 		{
 			throw /* ... */
 		}
-		// Set stream format to correct endianness.
-		auto format = stream.get_format();
+		// Set context format to correct endianness.
+		auto format = context.get_format();
 		format.set_endianness(m_endianness);
-		stream.set_format(format);
+		context.set_format(format);
 		// We have set correct endianness based on the 1st chunk ID.
 		// The rest of the file will be deserialized correctly according to
 		// our format.
 		Chunk::Size file_size;
 		// Read the size of the file.
-		std::io::read(stream, file_size);
+		std::io::read(context, file_size);
 		// Now we can determine where the file ends.
-		std::streamoff end_position = stream.get_position() + file_size;
+		std::streamoff end_position = context.get_stream().get_position() +
+			file_size;
 		// Read the form type of the file.
-		std::io::read(stream, m_form_type);
+		std::io::read(context, m_form_type);
 		// Read all the chunks.
-		while (stream.get_position() < end_position)
+		while (context.get_stream().get_position() < end_position)
 		{
-			m_chunks.emplace_back(stream);
+			m_chunks.emplace_back(context);
 		}
 	}
 	
-	void write(std::io::formatted_output_stream auto& stream) const
+	void write(std::io::output_context<auto> context) const
 	{
-		// Set the endianness of the stream.
-		auto format = stream.get_format();
+		// Set the endianness of the context.
+		auto format = context.get_format();
 		format.set_endianness(m_endianness);
-		stream.set_format(format);
+		context.set_format(format);
 		// Write the ID of the main chunk.
 		if (m_endianness == std::endian::little)
 		{
-			std::io::write(stream, LittleEndianFile);
+			std::io::write(context, LittleEndianFile);
 		}
 		else if (m_endianness == std::endian::big)
 		{
-			std::io::write(stream, BigEndianFile);
+			std::io::write(context, BigEndianFile);
 		}
 		else
 		{
@@ -484,13 +478,13 @@ public:
 			file_size += chunk.GetSize();
 		}
 		// Write the size of the file.
-		std::io::write(stream, file_size);
+		std::io::write(context, file_size);
 		// Write the form type of the file.
-		std::io::write(stream, m_form_type);
+		std::io::write(context, m_form_type);
 		// Write all the chunks.
 		for (const auto& chunk : m_chunks)
 		{
-			std::io::write(stream, chunk);
+			std::io::write(context, chunk);
 		}
 	}
 private:
@@ -528,7 +522,6 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 # Open issues
 
-* `std::io::format` as part of the stream class or as separate argument to `std::io::read` and `std::io::write`.
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if [@P1468R2] is accepted.
@@ -557,14 +550,6 @@ namespace std
 namespace io
 {
 
-enum class floating_point_format
-{
-	iec559,
-	native
-};
-
-class format;
-	
 enum class io_errc
 {
 	bad_file_descriptor = @_implementation-defined_@,
@@ -605,12 +590,21 @@ template <typename T>
 concept input_stream = @_see below_@;
 template <typename T>
 concept output_stream = @_see below_@;
-template <typename T>
-concept formatted_stream = @_see below_@;
-template <typename T>
-concept formatted_input_stream = @_see below_@;
-template <typename T>
-concept formatted_output_stream = @_see below_@;
+
+enum class floating_point_format
+{
+	iec559,
+	native
+};
+
+class format;
+template <typename S>
+class context;
+
+template <input_stream S>
+using input_context = context<S>;
+template <output_stream S>
+using output_context = context<S>;
 
 // IO concepts
 template <typename T, typename S>
@@ -662,72 +656,6 @@ class file_stream;
 }
 }
 ```
-
-## 29.1.? Class `format` [io.format]
-
-```c++
-class format final
-{
-public:
-	// Constructor
-	constexpr format(endian endianness = endian::native,
-		floating_point_format float_format = floating_point_format::native)
-		noexcept;
-
-	// Member functions
-	constexpr endian get_endianness() const noexcept;
-	constexpr void set_endianness(endian new_endianness) noexcept;
-	constexpr floating_point_format get_floating_point_format() const noexcept;
-	constexpr void set_floating_point_format(floating_point_format new_format)
-		noexcept;
-	
-	// Equality
-	friend constexpr bool operator==(const format& lhs, const format& rhs)
-		noexcept = default;
-private:
-	endian endianness_; // exposition only
-	floating_point_format float_format_; // exposition only
-};
-```
-
-TODO
-
-### 29.1.?.? Constructor [io.format.cons]
-
-```c++
-constexpr format(endian endianness = endian::native,
-	floating_point_format float_format = floating_point_format::native)
-	noexcept;
-```
-
-*Ensures:* `endianness_ == endianness` and `float_format_ == float_format`.
-
-### 29.1.?.? Member functions [io.format.members]
-
-```c++
-constexpr endian get_endianness() const noexcept;
-```
-
-*Returns:* `endianness_`.
-
-```c++
-constexpr void set_endianness(endian new_endianness) noexcept;
-```
-
-*Ensures:* `endianness_ == new_endianness`.
-
-```c++
-constexpr floating_point_format get_floating_point_format() const noexcept;
-```
-
-*Returns:* `float_format_`.
-
-```c++
-constexpr void set_floating_point_format(floating_point_format new_format)
-	noexcept;
-```
-
-*Ensures:* `float_format_ == new_format`.
 
 ## 29.1.? Error handling [io.errors]
 
@@ -876,52 +804,134 @@ streamsize write_some(span<const byte> buffer);
 * `interrupted` - if writing was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
 
-### 29.1.?.? Concept `formatted_stream` [stream.concept.formatted]
+## 29.1.? Class `format` [io.format]
 
 ```c++
-template <typename T>
-concept formatted_stream = requires(const T s)
-	{
-		{s.get_format()} -> same_as<format>;
-	} && requires(T s, format f)
-	{
-		s.set_format(f);
-	};
+class format final
+{
+public:
+	// Constructor
+	constexpr format(endian endianness = endian::native,
+		floating_point_format float_format = floating_point_format::native)
+		noexcept;
+
+	// Member functions
+	constexpr endian get_endianness() const noexcept;
+	constexpr void set_endianness(endian new_endianness) noexcept;
+	constexpr floating_point_format get_floating_point_format() const noexcept;
+	constexpr void set_floating_point_format(floating_point_format new_format)
+		noexcept;
+	
+	// Equality
+	friend constexpr bool operator==(const format& lhs, const format& rhs)
+		noexcept = default;
+private:
+	endian endianness_; // exposition only
+	floating_point_format float_format_; // exposition only
+};
 ```
 
 TODO
 
-#### 29.1.?.?.? Format [stream.base.format]
+### 29.1.?.? Constructor [io.format.cons]
 
 ```c++
-format get_format() const noexcept;
+constexpr format(endian endianness = endian::native,
+	floating_point_format float_format = floating_point_format::native)
+	noexcept;
 ```
 
-*Returns:* Stream format.
+*Ensures:* `endianness_ == endianness` and `float_format_ == float_format`.
+
+### 29.1.?.? Member functions [io.format.members]
 
 ```c++
-void set_format(format f) noexcept;
+constexpr endian get_endianness() const noexcept;
 ```
 
-*Effects:* Sets the stream format to `f`.
-
-### 29.1.?.? Concept `formatted_input_stream` [stream.concept.input.formatted]
+*Returns:* `endianness_`.
 
 ```c++
-template <typename T>
-concept formatted_input_stream = input_stream<T> && formatted_stream<T>;
+constexpr void set_endianness(endian new_endianness) noexcept;
+```
+
+*Ensures:* `endianness_ == new_endianness`.
+
+```c++
+constexpr floating_point_format get_floating_point_format() const noexcept;
+```
+
+*Returns:* `float_format_`.
+
+```c++
+constexpr void set_floating_point_format(floating_point_format new_format)
+	noexcept;
+```
+
+*Ensures:* `float_format_ == new_format`.
+
+## 29.1.? Class template `context` [io.context]
+
+```c++
+template <typename S>
+class context final
+{
+public:
+	// Constructor
+	constexpr context(S& s, format f = {}) noexcept;
+	
+	// Stream
+	constexpr S& get_stream() noexcept;
+	constexpr const S& get_stream() const noexcept;
+	
+	// Format
+	constexpr format get_format() const noexcept;
+	constexpr void set_format(format f) noexcept;
+private:
+	S& stream_; // exposition only
+	format format_; // exposition only
+};
 ```
 
 TODO
 
-### 29.1.?.? Concept `formatted_output_stream` [stream.concept.output.formatted]
+### 29.1.?.? Constructor [io.context.cons]
 
 ```c++
-template <typename T>
-concept formatted_output_stream = output_stream<T> && formatted_stream<T>;
+constexpr context(S& s, format f = {}) noexcept;
 ```
 
-TODO
+*Effects:* Initializes `stream_` with `s`.
+
+*Ensures:* `format_ == f`.
+
+### 29.1.?.? Stream [io.context.stream]
+
+```c++
+constexpr S& get_stream() noexcept;
+```
+
+*Returns:* `stream_`.
+
+```c++
+constexpr const S& get_stream() const noexcept;
+```
+
+*Returns:* `stream_`.
+
+### 29.1.?.? Format [io.context.format]
+
+```c++
+constexpr format get_format() const noexcept;
+```
+
+*Returns:* `format_`.
+
+```c++
+constexpr void set_format(format f) noexcept;
+```
+
+*Ensures:* `format_ == f`.
 
 ## 29.1.? IO concepts [io.concepts]
 
@@ -931,7 +941,7 @@ TODO
 template <typename T, typename S>
 concept customly_readable_from =
 	input_stream<S> &&
-	requires(T object, S& s)
+	requires(T object, input_context<S> s)
 	{
 		object.read(s);
 	};
@@ -945,7 +955,7 @@ TODO
 template <typename T, typename S>
 concept customly_writable_to =
 	output_stream<S> &&
-	requires(const T object, S& s)
+	requires(const T object, output_context<S> s)
 	{
 		object.write(s);
 	};
@@ -958,37 +968,43 @@ TODO
 
 The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `U` is not `input_stream`, `io::read(S, E)` is ill-formed.
-* If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
-* If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
-* If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
-* If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
-* If `T` is `integral` and:
-  * `U` is not `formatted_input_stream`, `io::read(S, E)` is ill-formed.
-  * Otherwise, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from stream endianness to native endianness and assigns the result to object representation of `E`.
-* If `T` is `floating_point` and:
-  * `U` is not `formatted_input_stream`, `io::read(S, E)` is ill-formed.
-  * Otherwise, reads `sizeof(T)` bytes from the stream and:
-    * If stream floating point format is `native`, assigns the bytes to the object representation of `E`.
-    * If stream floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in stream endianness to native format and assigns the result to the object representation of `E`.
+* If `U` is not `input_stream` or specialization of `input_context`, `io::read(S, E)` is ill-formed.
+* If `U` is `input_stream`, calls `io::read(input_context(S), E)`.
+* If `U` is a specialization of `input_context` and:
+  * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
+  * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
+  * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
+  * If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
+  * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
+  * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
+    * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
+    * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
+
+The expression `io::read(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
+
+* If `U` is not `input_stream`, `io::read(S, E, F)` is ill-formed.
+* Otherwise, calls `io::read(input_context(S, F), E)`.
 
 ### 29.1.?.2 `io::write` [io.write]
 
 The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `U` is not `output_stream`, `io::write(S, E)` is ill-formed.
-* If `T` is `byte`, writes it to the stream.
-* If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
-* If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
-* If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
-* If `T` is `integral` or an enumeration type and:
-  * `U` is not `formatted_output_stream`, `io::write(S, E)` is ill-formed.
-  * Otherwise, performs conversion of object representation of `E` from native endianness to stream endianness and writes the result to the stream.
-* If `T` is `floating_point` and:
-  * `U` is not `formatted_output_stream`, `io::write(S, E)` is ill-formed.
-  * Otherwise:
-    * If stream floating point format is `native`, writes the object representation of `E` to the stream.
-    * If stream floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in stream endianness and writes the result to the stream.
+* If `U` is not `output_stream` or specialization of `output_context`, `io::write(S, E)` is ill-formed.
+* If `U` is `output_stream`, calls `io::write(output_context(S), E)`.
+* If `U` is a specialization of `output_context` and:
+  * If `T` is `byte`, writes it to the stream.
+  * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
+  * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
+  * If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
+  * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
+  * If `T` is `floating_point` and:
+    * If context floating point format is `native`, writes the object representation of `E` to the stream.
+    * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
+
+The expression `io::write(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
+
+* If `U` is not `output_stream`, `io::write(S, E, F)` is ill-formed.
+* Otherwise, calls `io::write(output_context(S, F), E)`.
 
 ## 29.1.? Span streams [span.streams]
 
@@ -999,13 +1015,8 @@ class input_span_stream final
 {
 public:
 	// Constructors
-	constexpr input_span_stream(format f = {}) noexcept;
-	constexpr input_span_stream(span<const byte> buffer, format f = {})
-		noexcept;
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
+	constexpr input_span_stream() noexcept;
+	constexpr input_span_stream(span<const byte> buffer) noexcept;
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1019,7 +1030,6 @@ public:
 	constexpr span<const byte> get_buffer() const noexcept;
 	constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 private:
-	format format_; // exposition only
 	span<const byte> buffer_; // exposition only
 	ptrdiff_t position_; // exposition only
 };
@@ -1030,39 +1040,23 @@ TODO
 #### 29.1.?.?.? Constructors [input.span.stream.cons]
 
 ```c++
-constexpr input_span_stream(format f = {}) noexcept;
+constexpr input_span_stream() noexcept;
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `empty(buffer_) == true`,
 * `position_ == 0`.
 
 ```c++
-constexpr input_span_stream(span<const byte> buffer, format f = {}) noexcept;
+constexpr input_span_stream(span<const byte> buffer) noexcept;
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `data(buffer_) == data(buffer)`,
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
-
-#### 29.1.?.?.? Format [input.span.stream.format]
-
-```c++
-constexpr format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-constexpr void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
 
 #### 29.1.?.?.? Position [input.span.stream.position]
 
@@ -1146,12 +1140,8 @@ class output_span_stream final
 {
 public:
 	// Constructors
-	constexpr output_span_stream(format f = {}) noexcept;
-	constexpr output_span_stream(span<byte> buffer, format f = {}) noexcept;
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
+	constexpr output_span_stream() noexcept;
+	constexpr output_span_stream(span<byte> buffer) noexcept;
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1165,7 +1155,6 @@ public:
 	constexpr span<byte> get_buffer() const noexcept;
 	constexpr void set_buffer(span<byte> new_buffer) noexcept;
 private:
-	format format_; // exposition only
 	span<byte> buffer_; // exposition only
 	ptrdiff_t position_; // exposition only
 };
@@ -1176,39 +1165,23 @@ TODO
 #### 29.1.?.?.? Constructors [output.span.stream.cons]
 
 ```c++
-constexpr output_span_stream(format f = {}) noexcept;
+constexpr output_span_stream() noexcept;
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `empty(buffer_) == true`,
 * `position_ == 0`.
 
 ```c++
-constexpr output_span_stream(span<byte> buffer, format f = {}) noexcept;
+constexpr output_span_stream(span<byte> buffer) noexcept;
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `data(buffer_) == data(buffer)`,
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
-
-#### 29.1.?.?.? Format [output.span.stream.format]
-
-```c++
-constexpr format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-constexpr void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
 
 #### 29.1.?.?.? Position [output.span.stream.position]
 
@@ -1292,12 +1265,8 @@ class span_stream final
 {
 public:
 	// Constructors
-	constexpr span_stream(format f = {}) noexcept;
-	constexpr span_stream(span<byte> buffer, format f = {}) noexcept;
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
+	constexpr span_stream() noexcept;
+	constexpr span_stream(span<byte> buffer) noexcept;
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1314,7 +1283,6 @@ public:
 	constexpr span<byte> get_buffer() const noexcept;
 	constexpr void set_buffer(span<byte> new_buffer) noexcept;
 private:
-	format format_; // exposition only
 	span<byte> buffer_; // exposition only
 	ptrdiff_t position_; // exposition only
 };
@@ -1325,39 +1293,23 @@ TODO
 #### 29.1.?.?.? Constructors [span.stream.cons]
 
 ```c++
-constexpr span_stream(format f = {}) noexcept;
+constexpr span_stream() noexcept;
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `empty(buffer_) == true`,
 * `position_ == 0`.
 
 ```c++
-constexpr span_stream(span<byte> buffer, format f = {}) noexcept;
+constexpr span_stream(span<byte> buffer) noexcept;
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `data(buffer_) == data(buffer)`,
 * `size(buffer_) == size(buffer)`,
 * `position_ == 0`.
-
-#### 29.1.?.?.? Format [span.stream.format]
-
-```c++
-constexpr format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-constexpr void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
 
 #### 29.1.?.?.? Position [output.span.stream.position]
 
@@ -1467,13 +1419,9 @@ class basic_input_memory_stream final
 {
 public:
 	// Constructors
-	constexpr basic_input_memory_stream(format f = {});
-	constexpr basic_input_memory_stream(const Container& c, format f = {});
-	constexpr basic_input_memory_stream(Container&& c, format f = {});
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
+	constexpr basic_input_memory_stream();
+	constexpr basic_input_memory_stream(const Container& c);
+	constexpr basic_input_memory_stream(Container&& c);
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1490,7 +1438,6 @@ public:
 	constexpr void set_buffer(Container&& new_buffer);
 	constexpr void reset_buffer() noexcept;
 private:
-	format format_; // exposition only
 	Container buffer_; // exposition only
 	typename Container::difference_type position_; // exposition only
 };
@@ -1501,50 +1448,29 @@ TODO
 #### 29.1.?.?.? Constructors [input.memory.stream.cons]
 
 ```c++
-constexpr basic_input_memory_stream(format f = {});
+constexpr basic_input_memory_stream();
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `buffer_ == Container{}`,
 * `position_ == 0`.
 
 ```c++
-constexpr basic_input_memory_stream(const Container& c, format f = {});
+constexpr basic_input_memory_stream(const Container& c);
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
 
-*Ensures:*
-
-* `get_format() == f`,
-* `position_ == 0`.
+*Ensures:* `position_ == 0`.
 
 ```c++
-constexpr basic_input_memory_stream(Container&& c, format f = {});
+constexpr basic_input_memory_stream(Container&& c);
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
-*Ensures:*
-
-* `get_format() == f`,
-* `position_ == 0`.
-
-#### 29.1.?.?.? Format [input.memory.stream.format]
-
-```c++
-constexpr format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-constexpr void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
+*Ensures:* `position_ == 0`.
 
 #### 29.1.?.?.? Position [input.memory.stream.position]
 
@@ -1650,13 +1576,9 @@ class basic_output_memory_stream final
 {
 public:
 	// Constructors
-	constexpr basic_output_memory_stream(format f = {});
-	constexpr basic_output_memory_stream(const Container& c, format f = {});
-	constexpr basic_output_memory_stream(Container&& c, format f = {});
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
+	constexpr basic_output_memory_stream();
+	constexpr basic_output_memory_stream(const Container& c);
+	constexpr basic_output_memory_stream(Container&& c);
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1673,7 +1595,6 @@ public:
 	constexpr void set_buffer(Container&& new_buffer);
 	constexpr void reset_buffer() noexcept;
 private:
-	format format_; // exposition only
 	Container buffer_; // exposition only
 	typename Container::difference_type position_; // exposition only
 };
@@ -1684,50 +1605,29 @@ TODO
 #### 29.1.?.?.? Constructors [output.memory.stream.cons]
 
 ```c++
-constexpr basic_output_memory_stream(format f = {});
+constexpr basic_output_memory_stream();
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `buffer_ == Container{}`,
 * `position_ == 0`.
 
 ```c++
-constexpr basic_output_memory_stream(const Container& c, format f = {});
+constexpr basic_output_memory_stream(const Container& c);
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
 
-*Ensures:*
-
-* `get_format() == f`,
-* `position_ == 0`.
+*Ensures:* `position_ == 0`.
 
 ```c++
-constexpr basic_output_memory_stream(Container&& c, format f = {});
+constexpr basic_output_memory_stream(Container&& c);
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
-*Ensures:*
-
-* `get_format() == f`,
-* `position_ == 0`.
-
-#### 29.1.?.?.? Format [output.memory.stream.format]
-
-```c++
-constexpr format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-constexpr void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
+*Ensures:* `position_ == 0`.
 
 #### 29.1.?.?.? Position [output.memory.stream.position]
 
@@ -1843,13 +1743,9 @@ class basic_memory_stream final
 {
 public:
 	// Constructors
-	constexpr basic_memory_stream(format f = {});
-	constexpr basic_memory_stream(const Container& c, format f = {});
-	constexpr basic_memory_stream(Container&& c, format f = {});
-
-	// Format
-	constexpr format get_format() const noexcept;
-	constexpr void set_format(format f) noexcept;
+	constexpr basic_memory_stream();
+	constexpr basic_memory_stream(const Container& c);
+	constexpr basic_memory_stream(Container&& c);
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1869,7 +1765,6 @@ public:
 	constexpr void set_buffer(Container&& new_buffer);
 	constexpr void reset_buffer() noexcept;
 private:
-	format format_; // exposition only
 	Container buffer_; // exposition only
 	typename Container::difference_type position_; // exposition only
 };
@@ -1880,50 +1775,29 @@ TODO
 #### 29.1.?.?.? Constructors [memory.stream.cons]
 
 ```c++
-constexpr basic_memory_stream(format f = {});
+constexpr basic_memory_stream();
 ```
 
 *Ensures:*
 
-* `get_format() == f`,
 * `buffer_ == Container{}`,
 * `position_ == 0`.
 
 ```c++
-constexpr basic_memory_stream(const Container& c, format f = {});
+constexpr basic_memory_stream(const Container& c);
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
 
-*Ensures:*
-
-* `get_format() == f`,
-* `position_ == 0`.
+*Ensures:* `position_ == 0`.
 
 ```c++
-constexpr basic_memory_stream(Container&& c, format f = {});
+constexpr basic_memory_stream(Container&& c);
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
-*Ensures:*
-
-* `get_format() == f`,
-* `position_ == 0`.
-
-#### 29.1.?.?.? Format [memory.stream.format]
-
-```c++
-constexpr format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-constexpr void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
+*Ensures:* `position_ == 0`.
 
 #### 29.1.?.?.? Position [memory.stream.position]
 
@@ -2069,10 +1943,6 @@ class file_stream_base
 public:
 	using native_handle_type = @_implementation-defined_@;
 	
-	// Format
-	format get_format() const noexcept;
-	void set_format(format f) noexcept;
-
 	// Position
 	streamoff get_position() const;
 	void set_position(streamoff position);
@@ -2084,17 +1954,14 @@ public:
 	native_handle_type release();
 protected:
 	// Construct/copy/destroy
-	file_stream_base(format f = {}) noexcept;
-	file_stream_base(const filesystem::path& file_name, mode mode, creation c,
-		format f = {});
-	file_stream_base(native_handle_type handle, format f = {});
+	file_stream_base() noexcept;
+	file_stream_base(const filesystem::path& file_name, mode mode, creation c);
+	file_stream_base(native_handle_type handle);
 	file_stream_base(const file_stream_base&) = delete;
 	file_stream_base(file_stream_base&&);
 	~file_stream_base();
 	file_stream_base& operator=(const file_stream_base&) = delete;
 	file_stream_base& operator=(file_stream_base&&);
-private:
-	format format_; // exposition only
 ```
 
 TODO
@@ -2102,47 +1969,26 @@ TODO
 #### 29.1.?.?.? Constructors [file.stream.base.cons]
 
 ```c++
-file_stream_base(format f = {}) noexcept;
+file_stream_base() noexcept;
 ```
 
 *Effects:* TODO
-
-*Ensures:* `format_ == f`.
 
 ```c++
-file_stream_base(const filesystem::path& file_name, mode mode, creation c,
-	format f = {});
+file_stream_base(const filesystem::path& file_name, mode mode, creation c);
 ```
 
 *Effects:* TODO
-
-*Ensures:* `format_ == f`.
 
 *Throws:* TODO
 
 ```c++
-file_stream_base(native_handle_type handle, format f = {});
+file_stream_base(native_handle_type handle);
 ```
 
 *Effects:* TODO
 
-*Ensures:* `format_ == f`.
-
 *Throws:* TODO
-
-#### 29.1.?.?.? Format [file.stream.base.format]
-
-```c++
-format get_format() const noexcept;
-```
-
-*Returns:* `format_`.
-
-```c++
-void set_format(format f) noexcept;
-```
-
-*Ensures:* `format_ == f`.
 
 #### 29.1.?.?.? Position [file.stream.base.position]
 
@@ -2177,9 +2023,9 @@ class input_file_stream final : public file_stream_base
 {
 public:
 	// Construct/copy/destroy
-	input_file_stream(format f = {}) noexcept;
-	input_file_stream(const filesystem::path& file_name, format f = {});
-	input_file_stream(native_handle_type handle, format f = {});
+	input_file_stream() noexcept = default;
+	input_file_stream(const filesystem::path& file_name);
+	input_file_stream(native_handle_type handle);
 
 	// Reading
 	streamsize read_some(span<byte> buffer);
@@ -2191,22 +2037,16 @@ TODO
 #### 29.1.?.?.? Constructors [input.file.stream.cons]
 
 ```c++
-input_file_stream(format f = {}) noexcept;
+input_file_stream(const filesystem::path& file_name);
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(f)`.
+*Effects:* Initializes the base class with `file_stream_base(file_name, mode::read, creation::open_existing)`.
 
 ```c++
-input_file_stream(const filesystem::path& file_name, format f = {});
+input_file_stream(native_handle_type handle);
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(file_name, mode::read, creation::open_existing, f)`.
-
-```c++
-input_file_stream(native_handle_type handle, format f = {});
-```
-
-*Effects:* Initializes the base class with `file_stream_base(handle, f)`.
+*Effects:* Initializes the base class with `file_stream_base(handle)`.
 
 #### 29.1.?.?.? Reading [input.file.stream.read]
 
@@ -2227,10 +2067,10 @@ class output_file_stream final : public file_stream_base
 {
 public:
 	// Construct/copy/destroy
-	output_file_stream(format f = {}) noexcept;
+	output_file_stream() noexcept = default;
 	output_file_stream(const filesystem::path& file_name,
-		creation c = creation::if_needed, format f = {});
-	output_file_stream(native_handle_type handle, format f = {});
+		creation c = creation::if_needed);
+	output_file_stream(native_handle_type handle);
 
 	// Writing
 	streamsize write_some(span<const byte> buffer);
@@ -2242,23 +2082,17 @@ TODO
 #### 29.1.?.?.? Constructors [output.file.stream.cons]
 
 ```c++
-output_file_stream(format f = {}) noexcept;
-```
-
-*Effects:* Initializes the base class with `file_stream_base(f)`.
-
-```c++
 output_file_stream(const filesystem::path& file_name,
-	creation c = creation::if_needed, format f = {});
+	creation c = creation::if_needed);
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c, f)`.
+*Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c)`.
 
 ```c++
-output_file_stream(native_handle_type handle, format f = {});
+output_file_stream(native_handle_type handle);
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(handle, f)`.
+*Effects:* Initializes the base class with `file_stream_base(handle)`.
 
 #### 29.1.?.?.? Writing [output.file.stream.write]
 
@@ -2279,10 +2113,10 @@ class file_stream final : public file_stream_base
 {
 public:
 	// Construct/copy/destroy
-	file_stream(format f = {}) noexcept;
+	file_stream() noexcept = default;
 	file_stream(const filesystem::path& file_name,
-		creation c = creation::if_needed, format f = {});
-	file_stream(native_handle_type handle, format f = {});
+		creation c = creation::if_needed);
+	file_stream(native_handle_type handle);
 
 	// Reading
 	streamsize read_some(span<byte> buffer);
@@ -2297,23 +2131,17 @@ TODO
 #### 29.1.?.?.? Constructors [file.stream.cons]
 
 ```c++
-file_stream(format f = {}) noexcept;
+file_stream(const filesystem::path& file_name,
+	creation c = creation::if_needed);
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(f)`.
+*Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c)`.
 
 ```c++
-file_stream(const filesystem::path& file_name, creation c = creation::if_needed,
-	format f = {});
+file_stream(native_handle_type handle);
 ```
 
-*Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c, f)`.
-
-```c++
-file_stream(native_handle_type handle, format f = {});
-```
-
-*Effects:* Initializes the base class with `file_stream_base(handle, f)`.
+*Effects:* Initializes the base class with `file_stream_base(handle)`.
 
 #### 29.1.?.?.? Reading [file.stream.read]
 
