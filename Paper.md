@@ -84,7 +84,7 @@ Thoughts on [@CEREAL]:
   * `std::io::output_span_stream`.
   * `std::io::span_stream`.
 * Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
-* All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The format is no longer a part of stream classes but is constructed on demand during [de]serialization as part of `std::io::context`.
+* All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The format is no longer a part of stream classes but is constructed on demand during [de]serialization as part of IO context.
 * Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and almost always start chunks of data with size, any kind of IO error is usually unrecoverable.
 * `std::ios_base::openmode` has been split into `std::io::mode` and `std::io::creation` that are modeled after the ones from [@P1031R2].
 * Since there is no more buffering (as of this revision) because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
@@ -198,13 +198,13 @@ struct MyType
 	int a;
 	float b;
 
-	void read(std::io::input_context<auto>& context)
+	void read(std::io::input_context auto& context)
 	{
 		std::io::read(context, a);
 		std::io::read(context, b);
 	}
 
-	void write(std::io::output_context<auto>& context) const
+	void write(std::io::output_context auto& context) const
 	{
 		std::io::write(context, a);
 		std::io::write(context, b);
@@ -244,13 +244,13 @@ struct VendorType // Can't modify interface.
 
 // Add "read" and "write" as free functions. They will be picked up
 // automatically.
-void read(std::io::input_context<auto>& context, VendorType& vt)
+void read(std::io::input_context auto& context, VendorType& vt)
 {
 	std::io::read(context, vt.a);
 	std::io::read(context, vt.b);
 }
 
-void write(std::io::output_context<auto>& context, const VendorType& vt)
+void write(std::io::output_context auto& context, const VendorType& vt)
 {
 	std::io::write(context, vt.a);
 	std::io::write(context, vt.b);
@@ -286,7 +286,7 @@ enum class MyEnum
 	Bar
 };
 
-void read(std::io::input_context<auto>& context, MyEnum& my_enum)
+void read(std::io::input_context auto& context, MyEnum& my_enum)
 {
 	// Create a raw integer that is the same type as underlying type of our
 	// enumeration.
@@ -340,14 +340,16 @@ struct Chunk
 	ID id;
 	std::vector<std::byte> data;
 	
-	template <std::io::seekable_stream S>
-	Chunk(std::io::input_context<S>& context)
+	template <std::io::input_context C>
+	requires std::io::seekable_stream<typename C::stream_type>
+	Chunk(C& context)
 	{
 		this->read(context);
 	}
 	
-	template <std::io::seekable_stream S>
-	void read(std::io::input_context<S>& context)
+	template <std::io::input_context C>
+	requires std::io::seekable_stream<typename C::stream_type>
+	void read(C& context)
 	{
 		// Read the ID of the chunk.
 		std::io::read(context, id);
@@ -365,7 +367,7 @@ struct Chunk
 		}
 	}
 	
-	void write(std::io::output_context<auto>& context) const
+	void write(std::io::output_context auto& context) const
 	{
 		// Write the ID of the chunk.
 		std::io::write(context, id);
@@ -403,14 +405,16 @@ constexpr Chunk::ID BigEndianFile{
 class File
 {
 public:
-	template <std::io::seekable_stream S>
-	File(std::io::input_context<S>& context)
+	template <std::io::input_context C>
+	requires std::io::seekable_stream<typename C::stream_type>
+	File(C& context)
 	{
 		this->read(context);
 	}
 
-	template <std::io::seekable_stream S>
-	void read(std::io::input_context<S>& context)
+	template <std::io::input_context C>
+	requires std::io::seekable_stream<typename C::stream_type>
+	void read(C& context)
 	{
 		// Read the main chunk ID.
 		Chunk::ID chunk_id;
@@ -451,7 +455,7 @@ public:
 		}
 	}
 	
-	void write(std::io::output_context<auto>& context) const
+	void write(std::io::output_context auto& context) const
 	{
 		// Set the endianness of the context.
 		auto format = context.get_format();
@@ -598,19 +602,21 @@ enum class floating_point_format
 };
 
 class format;
-template <typename S>
-class context;
 
-template <input_stream S>
-using input_context = context<S>;
-template <output_stream S>
-using output_context = context<S>;
-
-// IO concepts
-template <typename T, typename S>
+// Context concepts
+template <typename C>
+concept context = @_see below_@;
+template <typename C>
+concept input_context = @_see below_@;
+template <typename C>
+concept output_context = @_see below_@;
+template <typename T, typename C>
 concept customly_readable_from = @_see below_@;
-template <typename T, typename S>
+template <typename T, typename C>
 concept customly_writable_to = @_see below_@;
+
+template <typename S>
+class default_context;
 
 // Customization points
 inline constexpr @_unspecified_@ read = @_unspecified_@;
@@ -870,15 +876,85 @@ constexpr void set_floating_point_format(floating_point_format new_format)
 
 *Ensures:* `float_format_ == new_format`.
 
-## 29.1.? Class template `context` [io.context]
+## 29.1.? Context concepts [io.context.concepts]
+
+### 29.1.?.? Concept `context` [io.context]
+
+```c++
+template <typename C>
+concept context = requires
+	{
+		typename C::stream_type;
+	} && requires(const C ctx)
+	{
+		{ctx.get_stream()} -> same_as<const typename C::stream_type&>;
+		{ctx.get_format()} -> same_as<format>;
+	} && requires(C ctx, format f)
+	{
+		{ctx.get_stream()} -> same_as<typename C::stream_type&>;
+		ctx.set_format(f);
+	};
+```
+
+TODO
+
+### 29.1.?.? Concept `input_context` [input.context]
+
+```c++
+template <typename C>
+concept input_context = context<C> && input_stream<typename C::stream_type>;
+```
+
+TODO
+
+### 29.1.?.? Concept `output_context` [output.context]
+
+```c++
+template <typename C>
+concept output_context = context<C> && output_stream<typename C::stream_type>;
+```
+
+TODO
+
+### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
+
+```c++
+template <typename T, typename C>
+concept customly_readable_from =
+	input_context<C> &&
+	requires(T object, C& ctx)
+	{
+		object.read(ctx);
+	};
+```
+
+TODO
+
+### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
+
+```c++
+template <typename T, typename C>
+concept customly_writable_to =
+	output_context<C> &&
+	requires(const T object, C& ctx)
+	{
+		object.write(ctx);
+	};
+```
+
+TODO
+
+## 29.1.? Class template `default_context` [io.default.context]
 
 ```c++
 template <typename S>
-class context final
+class default_context final
 {
 public:
+	using stream_type = S;
+	
 	// Constructor
-	constexpr context(S& s, format f = {}) noexcept;
+	constexpr default_context(S& s, format f = {}) noexcept;
 	
 	// Stream
 	constexpr S& get_stream() noexcept;
@@ -895,17 +971,17 @@ private:
 
 TODO
 
-### 29.1.?.? Constructor [io.context.cons]
+### 29.1.?.? Constructor [io.default.context.cons]
 
 ```c++
-constexpr context(S& s, format f = {}) noexcept;
+constexpr default_context(S& s, format f = {}) noexcept;
 ```
 
 *Effects:* Initializes `stream_` with `s`.
 
 *Ensures:* `format_ == f`.
 
-### 29.1.?.? Stream [io.context.stream]
+### 29.1.?.? Stream [io.default.context.stream]
 
 ```c++
 constexpr S& get_stream() noexcept;
@@ -919,7 +995,7 @@ constexpr const S& get_stream() const noexcept;
 
 *Returns:* `stream_`.
 
-### 29.1.?.? Format [io.context.format]
+### 29.1.?.? Format [io.default.context.format]
 
 ```c++
 constexpr format get_format() const noexcept;
@@ -933,44 +1009,14 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-## 29.1.? IO concepts [io.concepts]
-
-### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
-
-```c++
-template <typename T, typename S>
-concept customly_readable_from =
-	input_stream<S> &&
-	requires(T object, input_context<S>& ctx)
-	{
-		object.read(ctx);
-	};
-```
-
-TODO
-
-### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
-
-```c++
-template <typename T, typename S>
-concept customly_writable_to =
-	output_stream<S> &&
-	requires(const T object, output_context<S>& ctx)
-	{
-		object.write(ctx);
-	};
-```
-
-TODO
-
 ## 29.1.? Customization points [???]
 ### 29.1.?.1 `io::read` [io.read]
 
 The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `U` is not `input_stream` or specialization of `input_context`, `io::read(S, E)` is ill-formed.
-* If `U` is `input_stream`, evaluates `input_context __ctx(S); io::read(__ctx, E)`.
-* If `U` is a specialization of `input_context` and:
+* If `U` is not `input_stream` or `input_context`, `io::read(S, E)` is ill-formed.
+* If `U` is `input_stream`, evaluates `default_context __ctx(S); io::read(__ctx, E)`.
+* If `U` is `input_context` and:
   * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
   * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
   * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
@@ -983,15 +1029,15 @@ The name `read` denotes a customization point object. The expression `io::read(S
 The expression `io::read(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
 
 * If `U` is not `input_stream`, `io::read(S, E, F)` is ill-formed.
-* Otherwise, evaluates `input_context __ctx(S, F); io::read(__ctx, E)`.
+* Otherwise, evaluates `default_context __ctx(S, F); io::read(__ctx, E)`.
 
 ### 29.1.?.2 `io::write` [io.write]
 
 The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `U` is not `output_stream` or specialization of `output_context`, `io::write(S, E)` is ill-formed.
-* If `U` is `output_stream`, evaluates `output_context __ctx(S); io::write(__ctx, E)`.
-* If `U` is a specialization of `output_context` and:
+* If `U` is not `output_stream` or `output_context`, `io::write(S, E)` is ill-formed.
+* If `U` is `output_stream`, evaluates `default_context __ctx(S); io::write(__ctx, E)`.
+* If `U` is `output_context` and:
   * If `T` is `byte`, writes it to the stream.
   * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
   * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
@@ -1004,7 +1050,7 @@ The name `write` denotes a customization point object. The expression `io::write
 The expression `io::write(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
 
 * If `U` is not `output_stream`, `io::write(S, E, F)` is ill-formed.
-* Otherwise, evaluates `output_context __ctx(S, F); io::write(__ctx, E)`.
+* Otherwise, evaluates `default_context __ctx(S, F); io::write(__ctx, E)`.
 
 ## 29.1.? Span streams [span.streams]
 
