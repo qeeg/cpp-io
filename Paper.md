@@ -198,13 +198,13 @@ struct MyType
 	int a;
 	float b;
 
-	void read(std::io::input_context<auto> context)
+	void read(std::io::input_context<auto>& context)
 	{
 		std::io::read(context, a);
 		std::io::read(context, b);
 	}
 
-	void write(std::io::output_context<auto> context) const
+	void write(std::io::output_context<auto>& context) const
 	{
 		std::io::write(context, a);
 		std::io::write(context, b);
@@ -244,13 +244,13 @@ struct VendorType // Can't modify interface.
 
 // Add "read" and "write" as free functions. They will be picked up
 // automatically.
-void read(std::io::input_context<auto> context, VendorType& vt)
+void read(std::io::input_context<auto>& context, VendorType& vt)
 {
 	std::io::read(context, vt.a);
 	std::io::read(context, vt.b);
 }
 
-void write(std::io::output_context<auto> context, const VendorType& vt)
+void write(std::io::output_context<auto>& context, const VendorType& vt)
 {
 	std::io::write(context, vt.a);
 	std::io::write(context, vt.b);
@@ -286,7 +286,7 @@ enum class MyEnum
 	Bar
 };
 
-void read(std::io::input_context<auto> context, MyEnum& my_enum)
+void read(std::io::input_context<auto>& context, MyEnum& my_enum)
 {
 	// Create a raw integer that is the same type as underlying type of our
 	// enumeration.
@@ -341,13 +341,13 @@ struct Chunk
 	std::vector<std::byte> data;
 	
 	template <std::io::seekable_stream S>
-	Chunk(std::io::input_context<S> context)
+	Chunk(std::io::input_context<S>& context)
 	{
 		this->read(context);
 	}
 	
 	template <std::io::seekable_stream S>
-	void read(std::io::input_context<S> context)
+	void read(std::io::input_context<S>& context)
 	{
 		// Read the ID of the chunk.
 		std::io::read(context, id);
@@ -365,7 +365,7 @@ struct Chunk
 		}
 	}
 	
-	void write(std::io::output_context<auto> context) const
+	void write(std::io::output_context<auto>& context) const
 	{
 		// Write the ID of the chunk.
 		std::io::write(context, id);
@@ -404,13 +404,13 @@ class File
 {
 public:
 	template <std::io::seekable_stream S>
-	File(std::io::input_context<S> context)
+	File(std::io::input_context<S>& context)
 	{
 		this->read(context);
 	}
 
 	template <std::io::seekable_stream S>
-	void read(std::io::input_context<S> context)
+	void read(std::io::input_context<S>& context)
 	{
 		// Read the main chunk ID.
 		Chunk::ID chunk_id;
@@ -451,7 +451,7 @@ public:
 		}
 	}
 	
-	void write(std::io::output_context<auto> context) const
+	void write(std::io::output_context<auto>& context) const
 	{
 		// Set the endianness of the context.
 		auto format = context.get_format();
@@ -941,9 +941,9 @@ constexpr void set_format(format f) noexcept;
 template <typename T, typename S>
 concept customly_readable_from =
 	input_stream<S> &&
-	requires(T object, input_context<S> s)
+	requires(T object, input_context<S>& ctx)
 	{
-		object.read(s);
+		object.read(ctx);
 	};
 ```
 
@@ -955,9 +955,9 @@ TODO
 template <typename T, typename S>
 concept customly_writable_to =
 	output_stream<S> &&
-	requires(const T object, output_context<S> s)
+	requires(const T object, output_context<S>& ctx)
 	{
-		object.write(s);
+		object.write(ctx);
 	};
 ```
 
@@ -969,7 +969,7 @@ TODO
 The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
 * If `U` is not `input_stream` or specialization of `input_context`, `io::read(S, E)` is ill-formed.
-* If `U` is `input_stream`, calls `io::read(input_context(S), E)`.
+* If `U` is `input_stream`, evaluates `input_context __ctx(S); io::read(__ctx, E)`.
 * If `U` is a specialization of `input_context` and:
   * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
   * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
@@ -983,14 +983,14 @@ The name `read` denotes a customization point object. The expression `io::read(S
 The expression `io::read(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
 
 * If `U` is not `input_stream`, `io::read(S, E, F)` is ill-formed.
-* Otherwise, calls `io::read(input_context(S, F), E)`.
+* Otherwise, evaluates `input_context __ctx(S, F); io::read(__ctx, E)`.
 
 ### 29.1.?.2 `io::write` [io.write]
 
 The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
 
 * If `U` is not `output_stream` or specialization of `output_context`, `io::write(S, E)` is ill-formed.
-* If `U` is `output_stream`, calls `io::write(output_context(S), E)`.
+* If `U` is `output_stream`, evaluates `output_context __ctx(S); io::write(__ctx, E)`.
 * If `U` is a specialization of `output_context` and:
   * If `T` is `byte`, writes it to the stream.
   * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
@@ -1004,7 +1004,7 @@ The name `write` denotes a customization point object. The expression `io::write
 The expression `io::write(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
 
 * If `U` is not `output_stream`, `io::write(S, E, F)` is ill-formed.
-* Otherwise, calls `io::write(output_context(S, F), E)`.
+* Otherwise, evaluates `output_context __ctx(S, F); io::write(__ctx, E)`.
 
 ## 29.1.? Span streams [span.streams]
 
