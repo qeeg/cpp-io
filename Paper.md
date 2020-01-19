@@ -595,6 +595,10 @@ concept input_stream = @_see below_@;
 template <typename T>
 concept output_stream = @_see below_@;
 
+// Customization points for unformatted IO
+inline constexpr @_unspecified_@ read_raw = @_unspecified_@;
+inline constexpr @_unspecified_@ write_raw = @_unspecified_@;
+
 enum class floating_point_format
 {
 	iec559,
@@ -618,7 +622,7 @@ concept customly_writable_to = @_see below_@;
 template <typename S>
 class default_context;
 
-// Customization points
+// Customization points for serialization
 inline constexpr @_unspecified_@ read = @_unspecified_@;
 inline constexpr @_unspecified_@ write = @_unspecified_@;
 
@@ -809,6 +813,24 @@ streamsize write_some(span<const byte> buffer);
 * `file_too_large` - tried to write past the maximum size supported by the stream.
 * `interrupted` - if writing was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
+
+## 29.1.? Customization points for unformatted IO [io.raw]
+
+### 29.1.?.1 `io::read_raw` [io.read.raw]
+
+The name `read_raw` denotes a customization point object. The expression `io::read_raw(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
+
+* If `U` is not `input_stream`, `io::read_raw(S, E)` is ill-formed.
+* If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
+* If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
+
+### 29.1.?.2 `io::write_raw` [io.write.raw]
+
+The name `write_raw` denotes a customization point object. The expression `io::write_raw(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
+
+* If `U` is not `output_stream`, `io::write_raw(S, E)` is ill-formed.
+* If `T` is `byte`, writes it to the stream.
+* If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
 
 ## 29.1.? Class `format` [io.format]
 
@@ -1009,7 +1031,8 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-## 29.1.? Customization points [???]
+## 29.1.? Customization points for serialization [io.serialization]
+
 ### 29.1.?.1 `io::read` [io.read]
 
 The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
@@ -1017,10 +1040,9 @@ The name `read` denotes a customization point object. The expression `io::read(S
 * If `U` is not `input_stream` or `input_context`, `io::read(S, E)` is ill-formed.
 * If `U` is `input_stream`, evaluates `default_context __ctx(S); io::read(__ctx, E)`.
 * If `U` is `input_context` and:
-  * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
-  * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
-  * If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
+  * If `T` is `byte` or a span of bytes, calls `io::read_raw(S.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
+  * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
   * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
   * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
     * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
@@ -1038,10 +1060,9 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `U` is not `output_stream` or `output_context`, `io::write(S, E)` is ill-formed.
 * If `U` is `output_stream`, evaluates `default_context __ctx(S); io::write(__ctx, E)`.
 * If `U` is `output_context` and:
-  * If `T` is `byte`, writes it to the stream.
-  * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
-  * If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
+  * If `T` is `byte` or a span of bytes, calls `io::write_raw(S.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
+  * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
   * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
   * If `T` is `floating_point` and:
     * If context floating point format is `native`, writes the object representation of `E` to the stream.
