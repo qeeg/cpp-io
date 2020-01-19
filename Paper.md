@@ -822,7 +822,7 @@ The name `read_raw` denotes a customization point object. The expression `io::re
 
 * If `U` is not `input_stream`, `io::read_raw(S, E)` is ill-formed.
 * If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
-* If `T` is a span of bytes, reads `ssize(E)` bytes from the stream and assigns them to `E`.
+* If `T` is `ranges::output_range<byte>`, for every iterator in the range reads a byte from the stream and assigns it to the said iterator.
 
 ### 29.1.?.2 `io::write_raw` [io.write.raw]
 
@@ -830,7 +830,7 @@ The name `write_raw` denotes a customization point object. The expression `io::w
 
 * If `U` is not `output_stream`, `io::write_raw(S, E)` is ill-formed.
 * If `T` is `byte`, writes it to the stream.
-* If `T` is a span of bytes, writes `ssize(E)` bytes to the stream.
+* If `T` is `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, for every iterator in the range writes the iterator's value to the stream.
 
 ## 29.1.? Class `format` [io.format]
 
