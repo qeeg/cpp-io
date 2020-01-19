@@ -1040,7 +1040,7 @@ The name `read` denotes a customization point object. The expression `io::read(S
 * If `U` is not `input_stream` or `input_context`, `io::read(S, E)` is ill-formed.
 * If `U` is `input_stream`, evaluates `default_context __ctx(S); io::read(__ctx, E)`.
 * If `U` is `input_context` and:
-  * If `T` is `byte` or a span of bytes, calls `io::read_raw(S.get_stream(), E)`.
+  * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(S.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
   * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
   * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
@@ -1060,7 +1060,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `U` is not `output_stream` or `output_context`, `io::write(S, E)` is ill-formed.
 * If `U` is `output_stream`, evaluates `default_context __ctx(S); io::write(__ctx, E)`.
 * If `U` is `output_context` and:
-  * If `T` is `byte` or a span of bytes, calls `io::write_raw(S.get_stream(), E)`.
+  * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(S.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
   * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
   * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
