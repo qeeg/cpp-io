@@ -117,9 +117,14 @@ int main()
 
 	// Create a stream. This stream will write to dynamically allocated memory.
 	std::io::output_memory_stream stream;
+	
+	// Create a context. Context contains format of non-byte data that is used
+	// to correctly do [de]serialization. If stream answers the question
+	// "Where?", context answers the question "How?".
+	std::io::default_context context{stream};
 
 	// Write the value to the stream.
-	std::io::write(stream, value);
+	std::io::write(context, value);
 
 	// Get reference to the buffer of the stream.
 	const auto& buffer = stream.get_buffer();
@@ -158,14 +163,14 @@ int main()
 	std::uint32_t value = 42;
 	
 	std::io::output_memory_stream stream;
-
-	// Create a specific binary format.
+	
+	// Create a context with specific binary format.
 	// Here we want our data in the stream to be in big endian byte order.
-	std::io::format format{std::endian::big};
+	std::io::default_context context{stream, std::endian::big};
 
 	// Write the value to the stream using our format.
 	// This will perform endianness conversion on non-big-endian systems.
-	std::io::write(stream, value, format);
+	std::io::write(context, value);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -215,10 +220,11 @@ int main()
 {
 	MyType t{1, 2.0f};
 	std::io::output_memory_stream stream;
+	std::io::default_context context{stream};
 
 	// std::io::write will automatically pickup "write" member function if it
 	// has a valid signature.
-	std::io::write(stream, t);
+	std::io::write(context, t);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -260,10 +266,11 @@ int main()
 {
 	VendorType vt{1, 2.0f};
 	std::io::output_memory_stream stream;
+	std::io::default_context context{stream};
 
 	// std::io::write will automatically pickup "write" non-member function if
 	// it has a valid signature.
-	std::io::write(stream, vt);
+	std::io::write(context, vt);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -1035,43 +1042,29 @@ constexpr void set_format(format f) noexcept;
 
 ### 29.1.?.1 `io::read` [io.read]
 
-The name `read` denotes a customization point object. The expression `io::read(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
+The name `read` denotes a customization point object. The expression `io::read(C, E)` for some subexpression `C` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `U` is not `input_stream` or `input_context`, `io::read(S, E)` is ill-formed.
-* If `U` is `input_stream`, evaluates `default_context __ctx(S); io::read(__ctx, E)`.
-* If `U` is `input_context` and:
-  * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(S.get_stream(), E)`.
-  * If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(S)`.
-  * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
-  * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
-  * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
-    * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
-    * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
-
-The expression `io::read(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
-
-* If `U` is not `input_stream`, `io::read(S, E, F)` is ill-formed.
-* Otherwise, evaluates `default_context __ctx(S, F); io::read(__ctx, E)`.
+* If `U` is not `input_context`, `io::read(C, E)` is ill-formed.
+* If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C.get_stream(), E)`.
+* If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(C)`.
+* If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
+* If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
+* If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
+  * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
+  * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
 
 ### 29.1.?.2 `io::write` [io.write]
 
-The name `write` denotes a customization point object. The expression `io::write(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
+The name `write` denotes a customization point object. The expression `io::write(C, E)` for some subexpression `C` with type `U` and subexpression `E` with type `T` has the following effects:
 
-* If `U` is not `output_stream` or `output_context`, `io::write(S, E)` is ill-formed.
-* If `U` is `output_stream`, evaluates `default_context __ctx(S); io::write(__ctx, E)`.
-* If `U` is `output_context` and:
-  * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(S.get_stream(), E)`.
-  * If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(S)`.
-  * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
-  * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
-  * If `T` is `floating_point` and:
-    * If context floating point format is `native`, writes the object representation of `E` to the stream.
-    * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
-
-The expression `io::write(S, E, F)` for some subexpression `S` with type `U`, subexpression `E` with type `T` and subexpression `F` with type `format` has the following effects:
-
-* If `U` is not `output_stream`, `io::write(S, E, F)` is ill-formed.
-* Otherwise, evaluates `default_context __ctx(S, F); io::write(__ctx, E)`.
+* If `U` is not `output_context`, `io::write(C, E)` is ill-formed.
+* If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(C.get_stream(), E)`.
+* If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(C)`.
+* If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
+* If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
+* If `T` is `floating_point` and:
+  * If context floating point format is `native`, writes the object representation of `E` to the stream.
+  * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
 
 ## 29.1.? Span streams [span.streams]
 
