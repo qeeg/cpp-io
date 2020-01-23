@@ -587,6 +587,14 @@ const error_category& category() noexcept;
 
 class io_error;
 
+// Stream concepts
+template <typename T>
+concept input_stream = @_see below_@;
+template <typename T>
+concept output_stream = @_see below_@;
+template <typename T>
+concept stream = @_see below_@;
+
 enum class base_position
 {
 	beginning,
@@ -594,13 +602,8 @@ enum class base_position
 	end
 };
 
-// Stream concepts
 template <typename T>
 concept seekable_stream = @_see below_@;
-template <typename T>
-concept input_stream = @_see below_@;
-template <typename T>
-concept output_stream = @_see below_@;
 
 // Customization points for unformatted IO
 inline constexpr @_unspecified_@ read_raw = @_unspecified_@;
@@ -626,7 +629,7 @@ concept customly_readable_from = @_see below_@;
 template <typename T, typename C>
 concept customly_writable_to = @_see below_@;
 
-template <typename S>
+template <stream S>
 class default_context;
 
 // Customization points for serialization
@@ -711,56 +714,6 @@ TODO
 
 ## 29.1.? Stream concepts [stream.concepts]
 
-### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
-
-```c++
-template <typename T>
-concept seekable_stream = requires(const T s)
-	{
-		{s.get_position()} -> same_as<streamoff>;
-	} && requires(T s, streamoff position, base_position base)
-	{
-		s.set_position(position);
-		s.seek_position(base, position);
-	};
-```
-
-TODO
-
-#### 29.1.?.?.? Position [seekable.stream.position]
-
-```c++
-streamoff get_position();
-```
-
-*Returns:* Current position of the stream.
-
-```c++
-void set_position(streamoff position);
-```
-
-*Effects:* Sets the position of the stream to the given value.
-
-*Throws:* `io_error` in case of error.
-
-*Error conditions:*
-
-* `invalid_argument` - if position is negative and the stream doesn't support that.
-* `value_too_large` - if position is greater than the maximum size supported by the stream.
-
-```c++
-void seek_position(base_position base, streamoff offset);
-```
-
-*Effects:* TODO
-
-*Throws:* `io_error` in case of error.
-
-*Error conditions:*
-
-* `invalid_argument` - if resulting position is negative and the stream doesn't support that.
-* `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
-
 ### 29.1.?.? Concept `input_stream` [stream.concept.input]
 
 ```c++
@@ -820,6 +773,65 @@ streamsize write_some(span<const byte> buffer);
 * `file_too_large` - tried to write past the maximum size supported by the stream.
 * `interrupted` - if writing was iterrupted due to the receipt of a signal.
 * `physical_error` - if physical I/O error has occured.
+
+#### 29.1.?.? Concept `stream` [stream.concept.stream]
+
+```c++
+template <typename T>
+concept stream = input_stream<T> || output_stream<T>;
+```
+
+TODO
+
+### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
+
+```c++
+template <typename T>
+concept seekable_stream = stream<T> && requires(const T s)
+	{
+		{s.get_position()} -> same_as<streamoff>;
+	} && requires(T s, streamoff position, base_position base)
+	{
+		s.set_position(position);
+		s.seek_position(base, position);
+	};
+```
+
+TODO
+
+#### 29.1.?.?.? Position [seekable.stream.position]
+
+```c++
+streamoff get_position();
+```
+
+*Returns:* Current position of the stream.
+
+```c++
+void set_position(streamoff position);
+```
+
+*Effects:* Sets the position of the stream to the given value.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+
+* `invalid_argument` - if position is negative and the stream doesn't support that.
+* `value_too_large` - if position is greater than the maximum size supported by the stream.
+
+```c++
+void seek_position(base_position base, streamoff offset);
+```
+
+*Effects:* TODO
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+
+* `invalid_argument` - if resulting position is negative and the stream doesn't support that.
+* `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
 
 ## 29.1.? Customization points for unformatted IO [io.raw]
 
@@ -911,10 +923,9 @@ constexpr void set_floating_point_format(floating_point_format new_format)
 
 ```c++
 template <typename C>
-concept context = requires
-	{
-		typename C::stream_type;
-	} && requires(const C ctx)
+concept context =
+	stream<typename C::stream_type> &&
+	requires(const C ctx)
 	{
 		{ctx.get_stream()} -> same_as<const typename C::stream_type&>;
 		{ctx.get_format()} -> same_as<format>;
@@ -976,7 +987,7 @@ TODO
 ## 29.1.? Class template `default_context` [io.default.context]
 
 ```c++
-template <typename S>
+template <stream S>
 class default_context final
 {
 public:
