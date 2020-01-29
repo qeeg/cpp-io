@@ -105,7 +105,55 @@ Thoughts on [@CEREAL]:
 
 # Tutorial
 
-## Example 1: Writing integer with default format
+## Example 1: Reading and writing bytes raw bytes
+
+In this example we write some bytes to a file, then read them back and check that the bytes match. Here we use `std::io::write_raw` and `std::io::read_raw` customization points. They work with raw bytes and do not try to interpret any data inside those bytes.
+
+```c++
+#include <io>
+#include <iostream>
+
+int main()
+{
+	// Some bytes we're gonna write to a file.
+	std::array<std::byte, 4> initial_bytes{
+		std::byte{1},
+		std::byte{2},
+		std::byte{3},
+		std::byte{4}};
+
+	{ // Start new RAII block.
+		// Open a file for writing.
+		std::io::output_file_stream stream{"test.bin"};
+		// Write our bytes to the file.
+		std::io::write_raw(stream, initial_bytes);
+	} // End of RAII block. This will close the stream.
+	
+	// Create space for bytes to read from the file.
+	std::array<std::byte, 4> read_bytes;
+	
+	{ // Start new RAII block.
+		// Open the file again, but now for reading.
+		std::io::input_file_stream stream{"test.bin"};
+		// Read the bytes from the file.
+		std::io::read_raw(stream, read_bytes);
+	} // End of RAII block. This will close the stream.
+	
+	// Compare read bytes with initial ones.
+	if (read_bytes == initial_bytes)
+	{
+		std::cout << "Bytes match.\n";
+	}
+	else
+	{
+		std::cout << "Bytes don't match.\n";
+	}
+}
+```
+
+## Example 2: Writing integer with default format
+
+Here we write the integer to memory stream and then inspect individual bytes of the stream to see how the integer was serialized. We use high level `std::io::write` customization point that can accept non-byte types and can do bit-fiddling if requested.
 
 ```c++
 #include <io>
@@ -146,9 +194,9 @@ The result is implementation defined because by default the bytes of the integer
 
 This is because `CHAR_BIT` is 8, `sizeof(unsigned int)` is 4 and `std::endian::native == std::endian::little`.
 
-We can be more strict and have more portable layout:
+## Example 3: Writing integer with specific layout
 
-## Example 2: Writing integer with specific layout
+Of course, in most real world cases you want to ensure the exact bit layout of all the types. For example, most file formats require bytes to be 8 bits wide, so it is good idea to put `static_assert(CHAR_BIT == 8)` in the code to only compile on compatible systems. Second, fundamental types such as `short`, `int` and `long` have implementation defined sizes so using them is also out of question. We need to use fixed-width integer types from `<cstdint>`. Finally, endianness. We need to explicitly specify endianness of the data that we are gonna share with the rest of the world.
 
 ```c++
 #include <cstdint>
@@ -188,11 +236,11 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 0 0 0 42
 ```
 
-## Example 3: Working with floating point numbers
+## Example 4: Working with floating point numbers
 
 TODO
 
-## Example 4: Working with user defined type
+## Example 5: Working with user defined type
 
 ```c++
 #include <io>
@@ -236,7 +284,7 @@ int main()
 }
 ```
 
-## Example 5: Working with user defined type (another approach)
+## Example 6: Working with user defined type (another approach)
 
 ```c++
 #include <io>
@@ -282,7 +330,7 @@ int main()
 }
 ```
 
-## Example 6: Working with enums
+## Example 7: Working with enums
 
 Enumerations are essentially strong integers. Therefore, serializing them is the same as integers and is done out-of-the-box by `std::io::write`. However, reading is not so simple since there is no language-level mechanism to iterate the valid values. For now you have to write non-member `read` function that will read the integer and manually check if it has a legal value. It is hopeful that the need to write such boilerplate code will be resolved by reflection in the future.
 
@@ -323,7 +371,7 @@ void read(std::io::input_context auto& context, MyEnum& my_enum)
 }
 ```
 
-## Example 7: Resource Interchange File Format
+## Example 8: Resource Interchange File Format
 
 There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
 
