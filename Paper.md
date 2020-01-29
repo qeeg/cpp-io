@@ -105,7 +105,7 @@ Thoughts on [@CEREAL]:
 
 # Tutorial
 
-## Example 1: Reading and writing bytes raw bytes
+## Example 1: Reading and writing raw bytes
 
 In this example we write some bytes to a file, then read them back and check that the bytes match. Here we use `std::io::write_raw` and `std::io::read_raw` customization points. They work with raw bytes and do not try to interpret any data inside those bytes.
 
