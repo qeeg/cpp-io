@@ -240,7 +240,105 @@ This will either fail to compile on systems where `CHAR_BIT != 8` or print:
 
 TODO
 
-## Example 5: Working with user defined type
+## Example 5: User defined type with fixed format, member functions
+
+In a lot of cases you know the format of your data at compile time. Therefore, your types can just provide `read` and `write` member functions that take a reference to stream. Then you just create context on the spot and do [de]serialization.
+
+```c++
+#include <io>
+#include <iostream>
+
+struct MyType
+{
+	int a;
+	float b;
+
+	void read(std::io::input_stream auto& stream)
+	{
+		// We really want only big endian byte order here.
+		std::io::default_context context{stream, std::endian::big};
+		std::io::read(context, a);
+		std::io::read(context, b);
+	}
+
+	void write(std::io::output_stream auto& stream) const
+	{
+		// We really want only big endian byte order here.
+		std::io::default_context context{stream, std::endian::big};
+		std::io::write(context, a);
+		std::io::write(context, b);
+	}
+};
+
+int main()
+{
+	MyType my_object{1, 2.0f};
+	std::io::output_memory_stream stream;
+	
+	// std::io::write will automatically pickup "write" member function if it
+	// has a valid signature.
+	std::io::write(stream, my_object);
+
+	const auto& buffer = stream.get_buffer();
+
+	for (auto byte : buffer)
+	{
+		std::cout << std::to_integer<int>(byte) << ' ';
+	}
+	std::cout << '\n';
+}
+```
+
+## Example 6: User defined type with fixed format, free functions
+
+If for some reason you can't add member functions, you can define `read` and `write` free functions instead.
+
+```c++
+#include <io>
+#include <iostream>
+
+struct MyType
+{
+	int a;
+	float b;
+};
+
+// Add "read" and "write" as free functions. They will be picked up
+// automatically.
+void read(std::io::input_stream auto& stream, MyType& object)
+{
+	std::io::default_context context{stream, std::endian::big};
+	std::io::read(context, object.a);
+	std::io::read(context, object.b);
+}
+
+void write(std::io::output_stream auto& stream, const MyType& object)
+{
+	std::io::default_context context{stream, std::endian::big};
+	std::io::write(context, object.a);
+	std::io::write(context, object.b);
+}
+
+int main()
+{
+	MyType my_object{1, 2.0f};
+	std::io::output_memory_stream stream;
+	
+	std::io::write(stream, my_object);
+
+	const auto& buffer = stream.get_buffer();
+
+	for (auto byte : buffer)
+	{
+		std::cout << std::to_integer<int>(byte) << ' ';
+	}
+	std::cout << '\n';
+}
+```
+
+## Example 7: User defined type with dynamic format, member functions
+
+In more involved cases such as containers the format of the data in inner layers may depend on data in outer layers. One common example is the header of the container specifying endianness of the data inside of the container. In this case you can provide `read` and `write` member functions that take context instead of stream and pass context from outer layers to inner layers, preserving the format recursively.
 
 ```c++
 #include <io>
@@ -253,12 +351,14 @@ struct MyType
 
 	void read(std::io::input_context auto& context)
 	{
+		// Deserialize data using the context taken from the outside.
 		std::io::read(context, a);
 		std::io::read(context, b);
 	}
 
 	void write(std::io::output_context auto& context) const
 	{
+		// Serialize data using the context taken from the outside.
 		std::io::write(context, a);
 		std::io::write(context, b);
 	}
@@ -266,13 +366,13 @@ struct MyType
 
 int main()
 {
-	MyType t{1, 2.0f};
+	MyType my_object{1, 2.0f};
 	std::io::output_memory_stream stream;
-	std::io::default_context context{stream};
+	
+	// Create context at the top layer that we can pass through to lower layers.
+	std::io::default_context context{stream, std::endian::big};
 
-	// std::io::write will automatically pickup "write" member function if it
-	// has a valid signature.
-	std::io::write(context, t);
+	std::io::write(context, my_object);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -284,41 +384,40 @@ int main()
 }
 ```
 
-## Example 6: Working with user defined type (another approach)
+## Example 8: User defined type with dynamic format, free functions
+
+And again, you can do the same with free functions.
 
 ```c++
 #include <io>
 #include <iostream>
 
-struct VendorType // Can't modify interface.
+struct MyType
 {
 	int a;
 	float b;
 };
 
-// Add "read" and "write" as free functions. They will be picked up
-// automatically.
-void read(std::io::input_context auto& context, VendorType& vt)
+void read(std::io::input_context auto& context, MyType& object)
 {
-	std::io::read(context, vt.a);
-	std::io::read(context, vt.b);
+	std::io::read(context, object.a);
+	std::io::read(context, object.b);
 }
 
-void write(std::io::output_context auto& context, const VendorType& vt)
+void write(std::io::output_context auto& context, const MyType& object)
 {
-	std::io::write(context, vt.a);
-	std::io::write(context, vt.b);
+	std::io::write(context, object.a);
+	std::io::write(context, object.b);
 }
 
 int main()
 {
-	VendorType vt{1, 2.0f};
+	MyType my_object{1, 2.0f};
 	std::io::output_memory_stream stream;
-	std::io::default_context context{stream};
+	
+	std::io::default_context context{stream, std::endian::big};
 
-	// std::io::write will automatically pickup "write" non-member function if
-	// it has a valid signature.
-	std::io::write(context, vt);
+	std::io::write(context, my_object);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -330,7 +429,7 @@ int main()
 }
 ```
 
-## Example 7: Working with enums
+## Example 9: Working with enums
 
 Enumerations are essentially strong integers. Therefore, serializing them is the same as integers and is done out-of-the-box by `std::io::write`. However, reading is not so simple since there is no language-level mechanism to iterate the valid values. For now you have to write non-member `read` function that will read the integer and manually check if it has a legal value. It is hopeful that the need to write such boilerplate code will be resolved by reflection in the future.
 
@@ -371,9 +470,9 @@ void read(std::io::input_context auto& context, MyEnum& my_enum)
 }
 ```
 
-## Example 8: Resource Interchange File Format
+## Example 10: Resource Interchange File Format
 
-There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, set the format of the stream to the correct endianness and read the rest of the file as usual.
+There are 2 flavors of RIFF files: little-endian and big-endian. Endianness is determined by the ID of the first chunk. ASCII "RIFF" means little-endian, ASCII "RIFX" means big-endian. We can just read the chunk ID as sequence of bytes, create the context with the correct endianness and read the rest of the file using that context.
 
 ```c++
 #include <io>
@@ -460,20 +559,20 @@ constexpr Chunk::ID BigEndianFile{
 class File
 {
 public:
-	template <std::io::input_context C>
-	requires std::io::seekable_stream<typename C::stream_type>
-	File(C& context)
+	template <std::io::input_stream S>
+	requires std::io::seekable_stream<S>
+	File(S& stream)
 	{
-		this->read(context);
+		this->read(stream);
 	}
 
-	template <std::io::input_context C>
-	requires std::io::seekable_stream<typename C::stream_type>
-	void read(C& context)
+	template <std::io::input_stream S>
+	requires std::io::seekable_stream<S>
+	void read(S& stream)
 	{
 		// Read the main chunk ID.
 		Chunk::ID chunk_id;
-		std::io::read(context, chunk_id);
+		std::io::read_raw(stream, chunk_id);
 		if (chunk_id == LittleEndianFile)
 		{
 			// We have little endian file.
@@ -488,10 +587,8 @@ public:
 		{
 			throw /* ... */
 		}
-		// Set context format to correct endianness.
-		auto format = context.get_format();
-		format.set_endianness(m_endianness);
-		context.set_format(format);
+		// Create context with correct endianness.
+		std::io::default_context context{stream, m_endianness};
 		// We have set correct endianness based on the 1st chunk ID.
 		// The rest of the file will be deserialized correctly according to
 		// our format.
@@ -499,23 +596,20 @@ public:
 		// Read the size of the file.
 		std::io::read(context, file_size);
 		// Now we can determine where the file ends.
-		std::streamoff end_position = context.get_stream().get_position() +
-			file_size;
+		std::streamoff end_position = stream.get_position() + file_size;
 		// Read the form type of the file.
 		std::io::read(context, m_form_type);
 		// Read all the chunks.
-		while (context.get_stream().get_position() < end_position)
+		while (stream.get_position() < end_position)
 		{
 			m_chunks.emplace_back(context);
 		}
 	}
 	
-	void write(std::io::output_context auto& context) const
+	void write(std::io::output_stream auto& stream) const
 	{
-		// Set the endianness of the context.
-		auto format = context.get_format();
-		format.set_endianness(m_endianness);
-		context.set_format(format);
+		// Create context with correct endianness.
+		std::io::default_context context{stream, m_endianness};
 		// Write the ID of the main chunk.
 		if (m_endianness == std::endian::little)
 		{
@@ -591,7 +685,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 
 # Wording
 
-All text is relative to [@N4835].
+All text is relative to [@N4849].
 
 Move clauses 29.1 - 29.10 into a new clause 29.2 "Legacy text IO".
 
@@ -672,13 +766,19 @@ template <typename C>
 concept input_context = @_see below_@;
 template <typename C>
 concept output_context = @_see below_@;
-template <typename T, typename C>
-concept customly_readable_from = @_see below_@;
-template <typename T, typename C>
-concept customly_writable_to = @_see below_@;
 
 template <stream S>
 class default_context;
+
+// Serialization concepts
+template <typename T, typename S>
+concept customly_readable_from_stream = @_see below_@;
+template <typename T, typename S>
+concept customly_writable_to_stream = @_see below_@;
+template <typename T, typename C>
+concept customly_readable_from_context = @_see below_@;
+template <typename T, typename C>
+concept customly_writable_to_context = @_see below_@;
 
 // Customization points for serialization
 inline constexpr @_unspecified_@ read = @_unspecified_@;
@@ -1004,34 +1104,6 @@ concept output_context = context<C> && output_stream<typename C::stream_type>;
 
 TODO
 
-### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
-
-```c++
-template <typename T, typename C>
-concept customly_readable_from =
-	input_context<C> &&
-	requires(T object, C& ctx)
-	{
-		object.read(ctx);
-	};
-```
-
-TODO
-
-### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
-
-```c++
-template <typename T, typename C>
-concept customly_writable_to =
-	output_context<C> &&
-	requires(const T object, C& ctx)
-	{
-		object.write(ctx);
-	};
-```
-
-TODO
-
 ## 29.1.? Class template `default_context` [io.default.context]
 
 ```c++
@@ -1097,33 +1169,100 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
+## 29.1.? Serialization concepts [serialization.concepts]
+
+### 29.1.?.? Concept `customly_readable_from_stream` [io.concept.readable.stream]
+
+```c++
+template <typename T, typename S>
+concept customly_readable_from_stream =
+	input_stream<S> &&
+	requires(T object, S& s)
+	{
+		object.read(s);
+	};
+```
+
+TODO
+
+### 29.1.?.? Concept `customly_writable_to_stream` [io.concept.writable.stream]
+
+```c++
+template <typename T, typename S>
+concept customly_writable_to_stream =
+	output_stream<S> &&
+	requires(const T object, S& s)
+	{
+		object.write(s);
+	};
+```
+
+TODO
+
+
+### 29.1.?.? Concept `customly_readable_from_context` [io.concept.readable.context]
+
+```c++
+template <typename T, typename C>
+concept customly_readable_from_context =
+	input_context<C> &&
+	requires(T object, C& ctx)
+	{
+		object.read(ctx);
+	};
+```
+
+TODO
+
+### 29.1.?.? Concept `customly_writable_to_context` [io.concept.writable.context]
+
+```c++
+template <typename T, typename C>
+concept customly_writable_to_context =
+	output_context<C> &&
+	requires(const T object, C& ctx)
+	{
+		object.write(ctx);
+	};
+```
+
+TODO
+
 ## 29.1.? Customization points for serialization [io.serialization]
 
 ### 29.1.?.1 `io::read` [io.read]
 
-The name `read` denotes a customization point object. The expression `io::read(C, E)` for some subexpression `C` with type `U` and subexpression `E` with type `T` has the following effects:
+The name `read` denotes a customization point object. The expression `io::read(C, E)` for some subexpression `C` with type `T` and subexpression `E` with type `U` has the following effects:
 
-* If `U` is not `input_context`, `io::read(C, E)` is ill-formed.
-* If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C.get_stream(), E)`.
-* If `T` and `U` satisfy `customly_readable_from<T, U>`, calls `E.read(C)`.
-* If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
-* If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
-* If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
-  * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
-  * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
+* If `T` is not `input_stream` or `input_context`, `io::read(C, E)` is ill-formed.
+* If `T` is `input_stream` and:
+  * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C, E)`.
+  * If `T` and `U` satisfy `customly_readable_from_stream<U, T>`, calls `E.read(C)`.
+* If `T` is `input_context` and:
+  * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C.get_stream(), E)`.
+  * If `T` and `U` satisfy `customly_readable_from_context<U, T>`, calls `E.read(C)`.
+  * If `U` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
+  * If `U` is `integral`, reads `sizeof(U)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
+  * If `U` is `floating_point`, reads `sizeof(U)` bytes from the stream and:
+    * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
+    * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
 
 ### 29.1.?.2 `io::write` [io.write]
 
-The name `write` denotes a customization point object. The expression `io::write(C, E)` for some subexpression `C` with type `U` and subexpression `E` with type `T` has the following effects:
+The name `write` denotes a customization point object. The expression `io::write(C, E)` for some subexpression `C` with type `T` and subexpression `E` with type `U` has the following effects:
 
-* If `U` is not `output_context`, `io::write(C, E)` is ill-formed.
-* If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(C.get_stream(), E)`.
-* If `T` and `U` satisfy `customly_writable_to<T,U>`, calls `E.write(C)`.
-* If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
-* If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
-* If `T` is `floating_point` and:
-  * If context floating point format is `native`, writes the object representation of `E` to the stream.
-  * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
+* If `T` is not `output_stream` or `output_context`, `io::write(C, E)` is ill-formed.
+* If `T` is `output_stream` and:
+  * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C, E)`.
+  * If `T` and `U` satisfy `customly_writable_to_stream<U, T>`, calls `E.write(C)`.
+* If `T` is `output_context` and:
+  * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C.get_stream(), E)`.
+  * If `T` and `U` satisfy `customly_writable_to_context<U, T>`, calls `E.write(C)`.
+  * If `U` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
+  * If `U` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
+  * If `U` is `floating_point` and:
+    * If context floating point format is `native`, writes the object representation of `E` to the stream.
+    * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
 
 ## 29.1.? Span streams [span.streams]
 
