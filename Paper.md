@@ -100,7 +100,7 @@ Thoughts on [@CEREAL]:
   * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
   * `std::io::output_stream` requires `write_some` member function that writes one or more bytes to the stream and returns amount of bytes written.
   * `gcount` became the return value of `read_some`.
-  * `get`, `read`, `put` and `write` member functions were removed in favor of `read_some` and `write_some`.
+  * `get`, `read`, `put` and `write` member functions have been replaced with `std::io::read_raw` and `std::io::write_raw` customization points.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
 
 # Tutorial
