@@ -1238,6 +1238,7 @@ The name `read` denotes a customization point object. The expression `io::read(C
 * If `T` is `input_stream` and:
   * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C, E)`.
   * If `T` and `U` satisfy `customly_readable_from_stream<U, T>`, calls `E.read(C)`.
+  * If `U` is `integral` and `sizeof(U) == 1`, reads 1 byte from the stream and assigns its object representation to `E`.
 * If `T` is `input_context` and:
   * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_readable_from_context<U, T>`, calls `E.read(C)`.
@@ -1255,6 +1256,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is `output_stream` and:
   * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C, E)`.
   * If `T` and `U` satisfy `customly_writable_to_stream<U, T>`, calls `E.write(C)`.
+  * If `U` is `integral` or an enumeration type and `sizeof(U) == 1`, writes the object representation of `E` to the stream.
 * If `T` is `output_context` and:
   * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_writable_to_context<U, T>`, calls `E.write(C)`.
