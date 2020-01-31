@@ -985,19 +985,21 @@ void seek_position(base_position base, streamoff offset);
 
 ### 29.1.?.1 `io::read_raw` [io.read.raw]
 
-The name `read_raw` denotes a customization point object. The expression `io::read_raw(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
+The name `read_raw` denotes a customization point object. The expression `io::read_raw(S, E)` for some subexpression `S` with type `T` and subexpression `E` with type `U` has the following effects:
 
-* If `U` is not `input_stream`, `io::read_raw(S, E)` is ill-formed.
-* If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
-* If `T` is `ranges::output_range<byte>`, for every iterator in the range reads a byte from the stream and assigns it to the said iterator.
+* If `T` is not `input_stream`, `io::read_raw(S, E)` is ill-formed.
+* If `U` is `byte`, reads one byte from the stream and assigns it to `E`.
+* If `U` is `ranges::output_range<byte>`, for every iterator in the range reads a byte from the stream and assigns it to the said iterator.
+* If `U` is `integral` and `sizeof(U) == 1`, reads one byte from the stream and assigns its object representation to `E`.
 
 ### 29.1.?.2 `io::write_raw` [io.write.raw]
 
-The name `write_raw` denotes a customization point object. The expression `io::write_raw(S, E)` for some subexpression `S` with type `U` and subexpression `E` with type `T` has the following effects:
+The name `write_raw` denotes a customization point object. The expression `io::write_raw(S, E)` for some subexpression `S` with type `T` and subexpression `E` with type `U` has the following effects:
 
-* If `U` is not `output_stream`, `io::write_raw(S, E)` is ill-formed.
-* If `T` is `byte`, writes it to the stream.
-* If `T` is `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, for every iterator in the range writes the iterator's value to the stream.
+* If `T` is not `output_stream`, `io::write_raw(S, E)` is ill-formed.
+* If `U` is `byte`, writes it to the stream.
+* If `U` is `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, for every iterator in the range writes the iterator's value to the stream.
+* If `U` is `integral` and `sizeof(U) == 1`, writes the object representation of `E` to the stream.
 
 ## 29.1.? Class `format` [io.format]
 
@@ -1238,7 +1240,7 @@ The name `read` denotes a customization point object. The expression `io::read(C
 * If `T` is `input_stream` and:
   * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C, E)`.
   * If `T` and `U` satisfy `customly_readable_from_stream<U, T>`, calls `E.read(C)`.
-  * If `U` is `integral` and `sizeof(U) == 1`, reads 1 byte from the stream and assigns its object representation to `E`.
+  * If `U` is `integral` and `sizeof(U) == 1`, calls `io::read_raw(C, E)`.
 * If `T` is `input_context` and:
   * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_readable_from_context<U, T>`, calls `E.read(C)`.
@@ -1256,7 +1258,7 @@ The name `write` denotes a customization point object. The expression `io::write
 * If `T` is `output_stream` and:
   * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C, E)`.
   * If `T` and `U` satisfy `customly_writable_to_stream<U, T>`, calls `E.write(C)`.
-  * If `U` is `integral` or an enumeration type and `sizeof(U) == 1`, writes the object representation of `E` to the stream.
+  * If `U` is `integral` or an enumeration type and `sizeof(U) == 1`, calls `io::write_raw(C, byte{E})`.
 * If `T` is `output_context` and:
   * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C.get_stream(), E)`.
   * If `T` and `U` satisfy `customly_writable_to_context<U, T>`, calls `E.write(C)`.
