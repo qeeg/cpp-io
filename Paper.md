@@ -126,7 +126,7 @@ int main()
 		// Open a file for writing.
 		std::io::output_file_stream stream{"test.bin"};
 		// Write our bytes to the file.
-		std::io::write_raw(stream, initial_bytes);
+		std::io::write_raw(initial_bytes, stream);
 	} // End of RAII block. This will close the stream.
 	
 	// Create space for bytes to read from the file.
@@ -136,7 +136,7 @@ int main()
 		// Open the file again, but now for reading.
 		std::io::input_file_stream stream{"test.bin"};
 		// Read the bytes from the file.
-		std::io::read_raw(stream, read_bytes);
+		std::io::read_raw(read_bytes, stream);
 	} // End of RAII block. This will close the stream.
 	
 	// Compare read bytes with initial ones.
@@ -172,7 +172,7 @@ int main()
 	std::io::default_context context{stream};
 
 	// Write the value to the stream.
-	std::io::write(context, value);
+	std::io::write(value, context);
 
 	// Get reference to the buffer of the stream.
 	const auto& buffer = stream.get_buffer();
@@ -218,7 +218,7 @@ int main()
 
 	// Write the value to the stream using our format.
 	// This will perform endianness conversion on non-big-endian systems.
-	std::io::write(context, value);
+	std::io::write(value, context);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -257,16 +257,16 @@ struct MyType
 	{
 		// We really want only big endian byte order here.
 		std::io::default_context context{stream, std::endian::big};
-		std::io::read(context, a);
-		std::io::read(context, b);
+		std::io::read(a, context);
+		std::io::read(b, context);
 	}
 
 	void write(std::io::output_stream auto& stream) const
 	{
 		// We really want only big endian byte order here.
 		std::io::default_context context{stream, std::endian::big};
-		std::io::write(context, a);
-		std::io::write(context, b);
+		std::io::write(a, context);
+		std::io::write(b, context);
 	}
 };
 
@@ -277,7 +277,7 @@ int main()
 	
 	// std::io::write will automatically pickup "write" member function if it
 	// has a valid signature.
-	std::io::write(stream, my_object);
+	std::io::write(my_object, stream);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -305,18 +305,18 @@ struct MyType
 
 // Add "read" and "write" as free functions. They will be picked up
 // automatically.
-void read(std::io::input_stream auto& stream, MyType& object)
+void read(MyType& object, std::io::input_stream auto& stream)
 {
 	std::io::default_context context{stream, std::endian::big};
-	std::io::read(context, object.a);
-	std::io::read(context, object.b);
+	std::io::read(object.a, context);
+	std::io::read(object.b, context);
 }
 
-void write(std::io::output_stream auto& stream, const MyType& object)
+void write(const MyType& object, std::io::output_stream auto& stream)
 {
 	std::io::default_context context{stream, std::endian::big};
-	std::io::write(context, object.a);
-	std::io::write(context, object.b);
+	std::io::write(object.a, context);
+	std::io::write(object.b, context);
 }
 
 int main()
@@ -324,7 +324,7 @@ int main()
 	MyType my_object{1, 2.0f};
 	std::io::output_memory_stream stream;
 	
-	std::io::write(stream, my_object);
+	std::io::write(my_object, stream);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -352,15 +352,15 @@ struct MyType
 	void read(std::io::input_context auto& context)
 	{
 		// Deserialize data using the context taken from the outside.
-		std::io::read(context, a);
-		std::io::read(context, b);
+		std::io::read(a, context);
+		std::io::read(b, context);
 	}
 
 	void write(std::io::output_context auto& context) const
 	{
 		// Serialize data using the context taken from the outside.
-		std::io::write(context, a);
-		std::io::write(context, b);
+		std::io::write(a, context);
+		std::io::write(b, context);
 	}
 };
 
@@ -372,7 +372,7 @@ int main()
 	// Create context at the top layer that we can pass through to lower layers.
 	std::io::default_context context{stream, std::endian::big};
 
-	std::io::write(context, my_object);
+	std::io::write(my_object, context);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -398,16 +398,16 @@ struct MyType
 	float b;
 };
 
-void read(std::io::input_context auto& context, MyType& object)
+void read(MyType& object, std::io::input_context auto& context)
 {
-	std::io::read(context, object.a);
-	std::io::read(context, object.b);
+	std::io::read(object.a, context);
+	std::io::read(object.b, context);
 }
 
-void write(std::io::output_context auto& context, const MyType& object)
+void write(const MyType& object, std::io::output_context auto& context)
 {
-	std::io::write(context, object.a);
-	std::io::write(context, object.b);
+	std::io::write(object.a, context);
+	std::io::write(object.b, context);
 }
 
 int main()
@@ -417,7 +417,7 @@ int main()
 	
 	std::io::default_context context{stream, std::endian::big};
 
-	std::io::write(context, my_object);
+	std::io::write(my_object, context);
 
 	const auto& buffer = stream.get_buffer();
 
@@ -440,14 +440,14 @@ enum class MyEnum
 	Bar
 };
 
-void read(std::io::input_context auto& context, MyEnum& my_enum)
+void read(MyEnum& my_enum, std::io::input_context auto& context)
 {
 	// Create a raw integer that is the same type as underlying type of our
 	// enumeration.
 	std::underlying_type_t<MyEnum> raw;
 	
 	// Read the integer from the stream.
-	std::io::read(context, raw);
+	std::io::read(raw, context);
 	
 	// Cast it to our enumeration.
 	my_enum = static_cast<MyEnum>(raw);
@@ -506,13 +506,13 @@ struct Chunk
 	void read(C& context)
 	{
 		// Read the ID of the chunk.
-		std::io::read(context, id);
+		std::io::read(id, context);
 		// Read the size of the chunk.
 		Size size;
-		std::io::read(context, size);
+		std::io::read(size, context);
 		// Read the data of the chunk.
 		data.resize(size);
-		std::io::read(context, data);
+		std::io::read(data, context);
 		// Skip padding.
 		if (size % 2 == 1)
 		{
@@ -524,17 +524,17 @@ struct Chunk
 	void write(std::io::output_context auto& context) const
 	{
 		// Write the ID of the chunk.
-		std::io::write(context, id);
+		std::io::write(id, context);
 		// Write the size of the chunk.
 		Size size = std::size(data); // Production code would make sure there is
 		// no overflow here.
-		std::io::write(context, size);
+		std::io::write(size, context);
 		// Write the data of the chunk.
-		std::io::write(context, data);
+		std::io::write(data, context);
 		// Write padding.
 		if (size % 2 == 1)
 		{
-			std::io::write(context, std::byte{0});
+			std::io::write(std::byte{0}, context);
 		}
 	}
 	
@@ -572,7 +572,7 @@ public:
 	{
 		// Read the main chunk ID.
 		Chunk::ID chunk_id;
-		std::io::read_raw(stream, chunk_id);
+		std::io::read_raw(chunk_id, stream);
 		if (chunk_id == LittleEndianFile)
 		{
 			// We have little endian file.
@@ -594,11 +594,11 @@ public:
 		// our format.
 		Chunk::Size file_size;
 		// Read the size of the file.
-		std::io::read(context, file_size);
+		std::io::read(file_size, context);
 		// Now we can determine where the file ends.
 		std::streamoff end_position = stream.get_position() + file_size;
 		// Read the form type of the file.
-		std::io::read(context, m_form_type);
+		std::io::read(m_form_type, context);
 		// Read all the chunks.
 		while (stream.get_position() < end_position)
 		{
@@ -608,21 +608,21 @@ public:
 	
 	void write(std::io::output_stream auto& stream) const
 	{
-		// Create context with correct endianness.
-		std::io::default_context context{stream, m_endianness};
 		// Write the ID of the main chunk.
 		if (m_endianness == std::endian::little)
 		{
-			std::io::write(context, LittleEndianFile);
+			std::io::write_raw(LittleEndianFile, stream);
 		}
 		else if (m_endianness == std::endian::big)
 		{
-			std::io::write(context, BigEndianFile);
+			std::io::write_raw(BigEndianFile, stream);
 		}
 		else
 		{
 			throw /* ... */
 		}
+		// Create context with correct endianness.
+		std::io::default_context context{stream, m_endianness};
 		// Calculate the size of the file. For that we need to sum up the size
 		// of form type and sizes of all the chunks.
 		Chunk::Size file_size = 4;
@@ -631,13 +631,13 @@ public:
 			file_size += chunk.GetSize();
 		}
 		// Write the size of the file.
-		std::io::write(context, file_size);
+		std::io::write(file_size, context);
 		// Write the form type of the file.
-		std::io::write(context, m_form_type);
+		std::io::write(m_form_type, context);
 		// Write all the chunks.
 		for (const auto& chunk : m_chunks)
 		{
-			std::io::write(context, chunk);
+			std::io::write(chunk, context);
 		}
 	}
 private:
@@ -771,14 +771,10 @@ template <stream S>
 class default_context;
 
 // Serialization concepts
-template <typename T, typename S>
-concept customly_readable_from_stream = @_see below_@;
-template <typename T, typename S>
-concept customly_writable_to_stream = @_see below_@;
-template <typename T, typename C>
-concept customly_readable_from_context = @_see below_@;
-template <typename T, typename C>
-concept customly_writable_to_context = @_see below_@;
+template <typename T, typename I, typename... Args>
+concept customly_readable_from = @_see below_@;
+template <typename T, typename O, typename... Args>
+concept customly_writable_to = @_see below_@;
 
 // Customization points for serialization
 inline constexpr @_unspecified_@ read = @_unspecified_@;
@@ -985,21 +981,21 @@ void seek_position(base_position base, streamoff offset);
 
 ### 29.1.?.1 `io::read_raw` [io.read.raw]
 
-The name `read_raw` denotes a customization point object. The expression `io::read_raw(S, E)` for some subexpression `S` with type `T` and subexpression `E` with type `U` has the following effects:
+The name `read_raw` denotes a customization point object. The expression `io::read_raw(E, S)` for some subexpression `E` with type `T` and subexpression `S` with type `U` has the following effects:
 
-* If `T` is not `input_stream`, `io::read_raw(S, E)` is ill-formed.
-* If `U` is `byte`, reads one byte from the stream and assigns it to `E`.
-* If `U` is `ranges::output_range<byte>`, for every iterator in the range reads a byte from the stream and assigns it to the said iterator.
-* If `U` is `integral` and `sizeof(U) == 1`, reads one byte from the stream and assigns its object representation to `E`.
+* If `U` is not `input_stream`, `io::read_raw(E, S)` is ill-formed.
+* If `T` is `byte`, reads one byte from the stream and assigns it to `E`.
+* If `T` is `ranges::output_range<byte>`, for every iterator in the range reads a byte from the stream and assigns it to the said iterator.
+* If `T` is `integral` and `sizeof(T) == 1`, reads one byte from the stream and assigns its object representation to `E`.
 
 ### 29.1.?.2 `io::write_raw` [io.write.raw]
 
-The name `write_raw` denotes a customization point object. The expression `io::write_raw(S, E)` for some subexpression `S` with type `T` and subexpression `E` with type `U` has the following effects:
+The name `write_raw` denotes a customization point object. The expression `io::write_raw(E, S)` for some subexpression `E` with type `T` and subexpression `S` with type `U` has the following effects:
 
-* If `T` is not `output_stream`, `io::write_raw(S, E)` is ill-formed.
-* If `U` is `byte`, writes it to the stream.
-* If `U` is `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, for every iterator in the range writes the iterator's value to the stream.
-* If `U` is `integral` and `sizeof(U) == 1`, writes the object representation of `E` to the stream.
+* If `U` is not `output_stream`, `io::write_raw(E, S)` is ill-formed.
+* If `T` is `byte`, writes it to the stream.
+* If `T` is `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, for every iterator in the range writes the iterator's value to the stream.
+* If `T` is `integral` and `sizeof(T) == 1`, writes the object representation of `E` to the stream.
 
 ## 29.1.? Class `format` [io.format]
 
@@ -1173,58 +1169,29 @@ constexpr void set_format(format f) noexcept;
 
 ## 29.1.? Serialization concepts [serialization.concepts]
 
-### 29.1.?.? Concept `customly_readable_from_stream` [io.concept.readable.stream]
+### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
 
 ```c++
-template <typename T, typename S>
-concept customly_readable_from_stream =
-	input_stream<S> &&
-	requires(T object, S& s)
+template <typename T, typename I, typename... Args>
+concept customly_readable_from =
+	(input_stream<I> || input_context<I>) &&
+	requires(T object, I& i, Args&&... args)
 	{
-		object.read(s);
+		object.read(i, forward<Args>(args)...);
 	};
 ```
 
 TODO
 
-### 29.1.?.? Concept `customly_writable_to_stream` [io.concept.writable.stream]
+### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
 
 ```c++
-template <typename T, typename S>
-concept customly_writable_to_stream =
-	output_stream<S> &&
-	requires(const T object, S& s)
+template <typename T, typename O, typename... Args>
+concept customly_writable_to =
+	(output_stream<O> || output_context<O>) &&
+	requires(const T object, O& o, Args&&... args)
 	{
-		object.write(s);
-	};
-```
-
-TODO
-
-
-### 29.1.?.? Concept `customly_readable_from_context` [io.concept.readable.context]
-
-```c++
-template <typename T, typename C>
-concept customly_readable_from_context =
-	input_context<C> &&
-	requires(T object, C& ctx)
-	{
-		object.read(ctx);
-	};
-```
-
-TODO
-
-### 29.1.?.? Concept `customly_writable_to_context` [io.concept.writable.context]
-
-```c++
-template <typename T, typename C>
-concept customly_writable_to_context =
-	output_context<C> &&
-	requires(const T object, C& ctx)
-	{
-		object.write(ctx);
+		object.write(o, forward<Args>(args)...);
 	};
 ```
 
@@ -1234,37 +1201,37 @@ TODO
 
 ### 29.1.?.1 `io::read` [io.read]
 
-The name `read` denotes a customization point object. The expression `io::read(C, E)` for some subexpression `C` with type `T` and subexpression `E` with type `U` has the following effects:
+The name `read` denotes a customization point object. The expression `io::read(E, I, args...)` for some subexpression `E` with type `T`, subexpression `I` with type `U` and `args` with template parameter pack `Args` has the following effects:
 
-* If `T` is not `input_stream` or `input_context`, `io::read(C, E)` is ill-formed.
-* If `T` is `input_stream` and:
-  * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C, E)`.
-  * If `T` and `U` satisfy `customly_readable_from_stream<U, T>`, calls `E.read(C)`.
-  * If `U` is `integral` and `sizeof(U) == 1`, calls `io::read_raw(C, E)`.
-* If `T` is `input_context` and:
-  * If `U` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(C.get_stream(), E)`.
-  * If `T` and `U` satisfy `customly_readable_from_context<U, T>`, calls `E.read(C)`.
-  * If `U` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
-  * If `U` is `integral`, reads `sizeof(U)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
-  * If `U` is `floating_point`, reads `sizeof(U)` bytes from the stream and:
+* If `U` is not `input_stream` or `input_context`, `io::read(E, I, args...)` is ill-formed.
+* If `T`,`U` and `Args` satisfy `customly_readable_from<T, U, Args...>`, calls `E.read(I, forward<Args>(args)...)`.
+* Otherwise, if `sizeof...(Args) != 0`, `io::read(E, I, args...)` is ill-formed.
+* If `U` is `input_stream` and:
+  * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(E, I)`.
+  * If `T` is `integral` and `sizeof(T) == 1`, calls `io::read_raw(E, I)`.
+* If `U` is `input_context` and:
+  * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(E, I.get_stream())`.
+  * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
+  * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
+  * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
     * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
     * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
 
 ### 29.1.?.2 `io::write` [io.write]
 
-The name `write` denotes a customization point object. The expression `io::write(C, E)` for some subexpression `C` with type `T` and subexpression `E` with type `U` has the following effects:
+The name `write` denotes a customization point object. The expression `io::write(E, O, args...)` for some subexpression `E` with type `T`, subexpression `O` with type `U` and `args` with template parameter pack `Args` has the following effects:
 
-* If `T` is not `output_stream` or `output_context`, `io::write(C, E)` is ill-formed.
-* If `T` is `output_stream` and:
-  * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C, E)`.
-  * If `T` and `U` satisfy `customly_writable_to_stream<U, T>`, calls `E.write(C)`.
-  * If `U` is `integral` or an enumeration type and `sizeof(U) == 1`, calls `io::write_raw(C, byte{E})`.
-* If `T` is `output_context` and:
-  * If `U` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<U>, byte>`, calls `io::write_raw(C.get_stream(), E)`.
-  * If `T` and `U` satisfy `customly_writable_to_context<U, T>`, calls `E.write(C)`.
-  * If `U` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
-  * If `U` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
-  * If `U` is `floating_point` and:
+* If `U` is not `output_stream` or `output_context`, `io::write(E, O, args...)` is ill-formed.
+* If `T`,`U` and `Args` satisfy `customly_writable_to<T, U, Args...>`, calls `E.write(O, forward<Args>(args)...)`.
+* Otherwise, if `sizeof...(Args) != 0`, `io::write(E, O, args...)` is ill-formed.
+* If `U` is `output_stream` and:
+  * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(E, O)`.
+  * If `T` is `integral` or an enumeration type and `sizeof(T) == 1`, calls `io::write_raw(static_cast<byte>(E), O)`.
+* If `U` is `output_context` and:
+  * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(O.get_stream(), E)`.
+  * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
+  * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
+  * If `T` is `floating_point` and:
     * If context floating point format is `native`, writes the object representation of `E` to the stream.
     * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
 
