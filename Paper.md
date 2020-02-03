@@ -770,15 +770,15 @@ concept output_context = @_see below_@;
 template <stream S>
 class default_context;
 
-// Serialization concepts
-template <typename T, typename I, typename... Args>
-concept customly_readable_from = @_see below_@;
-template <typename T, typename O, typename... Args>
-concept customly_writable_to = @_see below_@;
-
 // Customization points for serialization
 inline constexpr @_unspecified_@ read = @_unspecified_@;
 inline constexpr @_unspecified_@ write = @_unspecified_@;
+
+// Serialization concepts
+template <typename T, typename I, typename... Args>
+concept readable_from = @_see below_@;
+template <typename T, typename O, typename... Args>
+concept writable_to = @_see below_@;
 
 // Span streams
 class input_span_stream;
@@ -1167,13 +1167,13 @@ constexpr void set_format(format f) noexcept;
 
 *Ensures:* `format_ == f`.
 
-## 29.1.? Serialization concepts [serialization.concepts]
+## 29.1.? Customization points for serialization [io.serialization]
 
-### 29.1.?.? Concept `customly_readable_from` [io.concept.readable]
+### 29.1.?.? Helper concepts
 
 ```c++
 template <typename T, typename I, typename... Args>
-concept customly_readable_from =
+concept @_customly-readable-from_@ =
 	(input_stream<I> || input_context<I>) &&
 	requires(T object, I& i, Args&&... args)
 	{
@@ -1181,13 +1181,9 @@ concept customly_readable_from =
 	};
 ```
 
-TODO
-
-### 29.1.?.? Concept `customly_writable_to` [io.concept.writable]
-
 ```c++
 template <typename T, typename O, typename... Args>
-concept customly_writable_to =
+concept @_customly-writable-to_@ =
 	(output_stream<O> || output_context<O>) &&
 	requires(const T object, O& o, Args&&... args)
 	{
@@ -1195,16 +1191,12 @@ concept customly_writable_to =
 	};
 ```
 
-TODO
-
-## 29.1.? Customization points for serialization [io.serialization]
-
-### 29.1.?.1 `io::read` [io.read]
+### 29.1.?.? `io::read` [io.read]
 
 The name `read` denotes a customization point object. The expression `io::read(E, I, args...)` for some subexpression `E` with type `T`, subexpression `I` with type `U` and `args` with template parameter pack `Args` has the following effects:
 
 * If `U` is not `input_stream` or `input_context`, `io::read(E, I, args...)` is ill-formed.
-* If `T`,`U` and `Args` satisfy `customly_readable_from<T, U, Args...>`, calls `E.read(I, forward<Args>(args)...)`.
+* If `T`,`U` and `Args` satisfy `@_customly-readable-from_@<T, U, Args...>`, calls `E.read(I, forward<Args>(args)...)`.
 * Otherwise, if `sizeof...(Args) != 0`, `io::read(E, I, args...)` is ill-formed.
 * If `U` is `input_stream` and:
   * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(E, I)`.
@@ -1217,12 +1209,12 @@ The name `read` denotes a customization point object. The expression `io::read(E
     * If context floating point format is `native`, assigns the bytes to the object representation of `E`.
     * If context floating point format is `iec559`, performs conversion of bytes treated as an ISO/IEC/IEEE 60559 floating point representation in context endianness to native format and assigns the result to the object representation of `E`.
 
-### 29.1.?.2 `io::write` [io.write]
+### 29.1.?.? `io::write` [io.write]
 
 The name `write` denotes a customization point object. The expression `io::write(E, O, args...)` for some subexpression `E` with type `T`, subexpression `O` with type `U` and `args` with template parameter pack `Args` has the following effects:
 
 * If `U` is not `output_stream` or `output_context`, `io::write(E, O, args...)` is ill-formed.
-* If `T`,`U` and `Args` satisfy `customly_writable_to<T, U, Args...>`, calls `E.write(O, forward<Args>(args)...)`.
+* If `T`,`U` and `Args` satisfy `@_customly-writable-to_@<T, U, Args...>`, calls `E.write(O, forward<Args>(args)...)`.
 * Otherwise, if `sizeof...(Args) != 0`, `io::write(E, O, args...)` is ill-formed.
 * If `U` is `output_stream` and:
   * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(E, O)`.
@@ -1234,6 +1226,36 @@ The name `write` denotes a customization point object. The expression `io::write
   * If `T` is `floating_point` and:
     * If context floating point format is `native`, writes the object representation of `E` to the stream.
     * If context floating point format is `iec559`, performs conversion of object representation of `E` from native format to ISO/IEC/IEEE 60559 format in context endianness and writes the result to the stream.
+
+## 29.1.? Serialization concepts [serialization.concepts]
+
+### 29.1.?.? Concept `readable_from` [io.concept.readable]
+
+```c++
+template <typename T, typename I, typename... Args>
+concept readable_from =
+	(input_stream<I> || input_context<I>) &&
+	requires(T& object, I& i, Args&&... args)
+	{
+		io::read(object, i, forward<Args>(args)...);
+	};
+```
+
+TODO
+
+### 29.1.?.? Concept `writable_to` [io.concept.writable]
+
+```c++
+template <typename T, typename O, typename... Args>
+concept writable_to =
+	(output_stream<O> || output_context<O>) &&
+	requires(const T& object, O& o, Args&&... args)
+	{
+		io::write(object, o, forward<Args>(args)...);
+	};
+```
+
+TODO
 
 ## 29.1.? Span streams [span.streams]
 
