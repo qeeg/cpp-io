@@ -1202,7 +1202,7 @@ The name `read` denotes a customization point object. The expression `io::read(E
   * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(E, I)`.
   * If `T` is `integral` and `sizeof(T) == 1`, calls `io::read_raw(E, I)`.
 * If `U` is `input_context` and:
-  * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read_raw(E, I.get_stream())`.
+  * If `T` is `byte` or `ranges::output_range<byte>`, calls `io::read(E, I.get_stream())`.
   * If `T` is `bool`, reads 1 byte from the stream, contextually converts its value to `bool` and assigns the result to `E`.
   * If `T` is `integral`, reads `sizeof(T)` bytes from the stream, performs conversion of bytes from context endianness to native endianness and assigns the result to object representation of `E`.
   * If `T` is `floating_point`, reads `sizeof(T)` bytes from the stream and:
@@ -1220,7 +1220,7 @@ The name `write` denotes a customization point object. The expression `io::write
   * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(E, O)`.
   * If `T` is `integral` or an enumeration type and `sizeof(T) == 1`, calls `io::write_raw(static_cast<byte>(E), O)`.
 * If `U` is `output_context` and:
-  * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write_raw(O.get_stream(), E)`.
+  * If `T` is `byte` or `ranges::input_range` and `same_as<ranges::range_value_t<T>, byte>`, calls `io::write(O.get_stream(), E)`.
   * If `T` is `bool`, writes a single byte whose value is the result of integral promotion of `E` to the stream.
   * If `T` is `integral` or an enumeration type, performs conversion of object representation of `E` from native endianness to context endianness and writes the result to the stream.
   * If `T` is `floating_point` and:
