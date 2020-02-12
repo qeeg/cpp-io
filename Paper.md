@@ -28,7 +28,20 @@ This proposal tries to fix all mentioned issues.
 
 # Prior art
 
-This proposal is based on ftz Serialization library which was initially written in 2010 targeting C++98 and was gradually updated to C++20. In particular, the following problems were encountered:
+This proposal is based on author's serialization library which was initially written in 2010 targeting C++98 and was gradually updated to C++20. The library is used to work with the following formats:
+
+* Standard MIDI file
+* Microsoft RIFF WAVE
+* QuakeC bytecode
+* WebAssembly module
+
+The following lessons were learned during development:
+
+* Endianness is of utmost importance. Standard MIDI files are always big-endian. Network byte order is big endian. RIFF can be either big or little. Most newer formats are little-endian. A user must be in control of endianness at all times. There should be transparent way to do endianness conversion. Endianness may change in the middle of the file in case of container formats such as RIFF MIDI.
+* Integers should be two's complement by default. While C++98 through C++17 allowed integers to be stored as ones' complement or sign+magnitude, the author is not aware of any file format that uses those representations. C++20 requires integers to be two's complement. A user working with exotic format can supply user defined type that does bit fiddling manually. Such is the case with WebAssembly that uses LEB128 for integers.
+* There should be a way to read and write floating point types in ISO 60559 `binaryN` formats regardless of the native format of floating point types. Most formats store floating point values in ISO 60559 formats. If floating point types provided by the implementation such as `float` and `double` are not ISO 60559, then the implementation is effectively cut off from the rest of the world unless there are conversion functions. Though the recent rise of `bfloat16` format shows that storage of floating point numbers continues to evolve.
+
+The following problems were encountered:
 
 * There was no byte type. This was fixed by `std::byte` in C++17.
 * There was no sound way to express a range of bytes. This was fixed by `std::span` in C++20.
