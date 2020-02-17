@@ -889,7 +889,7 @@ TODO
 streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
 
 *Returns:* The amount of bytes read.
 
@@ -919,7 +919,7 @@ TODO
 streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
 
 *Returns:* The amount of bytes written.
 
@@ -1316,7 +1316,7 @@ constexpr input_span_stream() noexcept;
 
 *Ensures:*
 
-* `empty(buffer_) == true`,
+* `ranges::empty(buffer_) == true`,
 * `position_ == 0`.
 
 ```c++
@@ -1325,8 +1325,8 @@ constexpr input_span_stream(span<const byte> buffer) noexcept;
 
 *Ensures:*
 
-* `data(buffer_) == data(buffer)`,
-* `size(buffer_) == size(buffer)`,
+* `ranges::data(buffer_) == ranges::data(buffer)`,
+* `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
 * `position_ == 0`.
 
 #### 29.1.?.?.? Position [input.span.stream.position]
@@ -1369,11 +1369,11 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= ranges::ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
-* Must be less than or equal to `ssize(buffer)`.
+* Must be less than or equal to `ranges::ssize(buffer)`.
 * Must be representable as `streamsize`.
-* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be less than or equal to `ranges::ssize(buffer_)`.
 * Position after the read must be representable as `streamoff`.
 
 After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
@@ -1384,7 +1384,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 *Error conditions:*
 
-* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
+* `value_too_large` - if `!ranges::empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 #### 29.1.?.?.? Buffer management [input.span.stream.buffer]
 
@@ -1400,8 +1400,8 @@ constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 
 *Ensures:*
 
-* `data(buffer_) == data(new_buffer)`,
-* `size(buffer_) == size(new_buffer)`,
+* `ranges::data(buffer_) == ranges::data(new_buffer)`,
+* `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
 * `position_ == 0`.
 
 ### 29.1.?.2 Class `output_span_stream` [output.span.stream]
@@ -1441,7 +1441,7 @@ constexpr output_span_stream() noexcept;
 
 *Ensures:*
 
-* `empty(buffer_) == true`,
+* `ranges::empty(buffer_) == true`,
 * `position_ == 0`.
 
 ```c++
@@ -1450,8 +1450,8 @@ constexpr output_span_stream(span<byte> buffer) noexcept;
 
 *Ensures:*
 
-* `data(buffer_) == data(buffer)`,
-* `size(buffer_) == size(buffer)`,
+* `ranges::data(buffer_) == ranges::data(buffer)`,
+* `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
 * `position_ == 0`.
 
 #### 29.1.?.?.? Position [output.span.stream.position]
@@ -1494,11 +1494,11 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that it satisfies the following constrains:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= ranges::ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that it satisfies the following constrains:
 
-* Must be less than or equal to `ssize(buffer)`.
+* Must be less than or equal to `ranges::ssize(buffer)`.
 * Must be representable as `streamsize`.
-* Position after the write must be less than or equal to `ssize(buffer_)`.
+* Position after the write must be less than or equal to `ranges::ssize(buffer_)`.
 * Position after the write must be representable as `streamoff`.
 
 After that writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
@@ -1509,7 +1509,7 @@ After that writes that amount of bytes from the given buffer to the stream and a
 
 *Error conditions:*
 
-* `file_too_large` - if `!empty(buffer) && ((position_ == ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
+* `file_too_large` - if `!ranges::empty(buffer) && ((position_ == ranges::ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
 #### 29.1.?.?.? Buffer management [output.span.stream.buffer]
 
@@ -1525,8 +1525,8 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 
 *Ensures:*
 
-* `data(buffer_) == data(new_buffer)`,
-* `size(buffer_) == size(new_buffer)`,
+* `ranges::data(buffer_) == ranges::data(new_buffer)`,
+* `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
 * `position_ == 0`.
 
 ### 29.1.?.3 Class `span_stream` [span.stream]
@@ -1569,7 +1569,7 @@ constexpr span_stream() noexcept;
 
 *Ensures:*
 
-* `empty(buffer_) == true`,
+* `ranges::empty(buffer_) == true`,
 * `position_ == 0`.
 
 ```c++
@@ -1578,8 +1578,8 @@ constexpr span_stream(span<byte> buffer) noexcept;
 
 *Ensures:*
 
-* `data(buffer_) == data(buffer)`,
-* `size(buffer_) == size(buffer)`,
+* `ranges::data(buffer_) == ranges::data(buffer)`,
+* `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
 * `position_ == 0`.
 
 #### 29.1.?.?.? Position [output.span.stream.position]
@@ -1622,11 +1622,11 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= ranges::ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
-* Must be less than or equal to `ssize(buffer)`.
+* Must be less than or equal to `ranges::ssize(buffer)`.
 * Must be representable as `streamsize`.
-* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be less than or equal to `ranges::ssize(buffer_)`.
 * Position after the read must be representable as `streamoff`.
 
 After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
@@ -1637,7 +1637,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 *Error conditions:*
 
-* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
+* `value_too_large` - if `!ranges::empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 #### 29.1.?.?.? Writing [span.stream.write]
 
@@ -1645,11 +1645,11 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that it satisfies the following constrains:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= ranges::ssize(buffer_)` or `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to write so that it satisfies the following constrains:
 
-* Must be less than or equal to `ssize(buffer)`.
+* Must be less than or equal to `ranges::ssize(buffer)`.
 * Must be representable as `streamsize`.
-* Position after the write must be less than or equal to `ssize(buffer_)`.
+* Position after the write must be less than or equal to `ranges::ssize(buffer_)`.
 * Position after the write must be representable as `streamoff`.
 
 After that writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
@@ -1660,7 +1660,7 @@ After that writes that amount of bytes from the given buffer to the stream and a
 
 *Error conditions:*
 
-* `file_too_large` - if `!empty(buffer) && ((position_ == ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
+* `file_too_large` - if `!ranges::empty(buffer) && ((position_ == ranges::ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
 #### 29.1.?.?.? Buffer management [span.stream.buffer]
 
@@ -1676,8 +1676,8 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 
 *Ensures:*
 
-* `data(buffer_) == data(new_buffer)`,
-* `size(buffer_) == size(new_buffer)`,
+* `ranges::data(buffer_) == ranges::data(new_buffer)`,
+* `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
 * `position_ == 0`.
 
 ## 29.1.? Memory streams [memory.streams]
@@ -1783,11 +1783,11 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= ranges::ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
-* Must be less than or equal to `ssize(buffer)`.
+* Must be less than or equal to `ranges::ssize(buffer)`.
 * Must be representable as `streamsize`.
-* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be less than or equal to `ranges::ssize(buffer_)`.
 * Position after the read must be representable as `streamoff`.
 
 After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
@@ -1798,7 +1798,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 *Error conditions:*
 
-* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
+* `value_too_large` - if `!ranges::empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 #### 29.1.?.?.? Buffer management [input.memory.stream.buffer]
 
@@ -1940,19 +1940,19 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ssize(buffer_)`:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ranges::ssize(buffer_)`:
 
 * Determines the amount of bytes to write so that it satisfies the following constrains:
-  * Must be less than or equal to `ssize(buffer)`.
+  * Must be less than or equal to `ranges::ssize(buffer)`.
   * Must be representable as `streamsize`.
-  * Position after the write must be less than or equal to `ssize(buffer_)`.
+  * Position after the write must be less than or equal to `ranges::ssize(buffer_)`.
   * Position after the write must be representable as `streamoff`.
 * Writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
 
 Otherwise:
 
 * Determines the amount of bytes to write so that it satisfies the following constrains:
-  * Must be less than or equal to `ssize(buffer)`.
+  * Must be less than or equal to `ranges::ssize(buffer)`.
   * Must be representable as `streamsize`.
   * Position after the write must be less than or equal to `buffer_.max_size()`.
   * Position after the write must be representable as `streamoff`.
@@ -1965,7 +1965,7 @@ Otherwise:
 
 *Error conditions:*
 
-* `file_too_large` - if `!empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
+* `file_too_large` - if `!ranges::empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
 #### 29.1.?.?.? Buffer management [output.memory.stream.buffer]
 
@@ -2110,11 +2110,11 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 constexpr streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= ranges::ssize(buffer_)`, returns `0`. If `position_ == numeric_limits<streamoff>::max()`, throws exception. Otherwise determines the amount of bytes to read so that it satisfies the following constrains:
 
-* Must be less than or equal to `ssize(buffer)`.
+* Must be less than or equal to `ranges::ssize(buffer)`.
 * Must be representable as `streamsize`.
-* Position after the read must be less than or equal to `ssize(buffer_)`.
+* Position after the read must be less than or equal to `ranges::ssize(buffer_)`.
 * Position after the read must be representable as `streamoff`.
 
 After that reads that amount of bytes from the stream to the given buffer and advances stream position by the amount of bytes read.
@@ -2125,7 +2125,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 *Error conditions:*
 
-* `value_too_large` - if `!empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
+* `value_too_large` - if `!ranges::empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
 #### 29.1.?.?.? Writing [memory.stream.write]
 
@@ -2133,19 +2133,19 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 constexpr streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. If `position_ >= buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ssize(buffer_)`:
+*Effects:* If `ranges::empty(buffer)`, returns `0`. If `position_ >= buffer_.max_size()` or `position_ == numeric_limits<streamoff>::max()`, throws exception. If `position_ < ranges::ssize(buffer_)`:
 
 * Determines the amount of bytes to write so that it satisfies the following constrains:
-  * Must be less than or equal to `ssize(buffer)`.
+  * Must be less than or equal to `ranges::ssize(buffer)`.
   * Must be representable as `streamsize`.
-  * Position after the write must be less than or equal to `ssize(buffer_)`.
+  * Position after the write must be less than or equal to `ranges::ssize(buffer_)`.
   * Position after the write must be representable as `streamoff`.
 * Writes that amount of bytes from the given buffer to the stream and advances stream position by the amount of bytes written.
 
 Otherwise:
 
 * Determines the amount of bytes to write so that it satisfies the following constrains:
-  * Must be less than or equal to `ssize(buffer)`.
+  * Must be less than or equal to `ranges::ssize(buffer)`.
   * Must be representable as `streamsize`.
   * Position after the write must be less than or equal to `buffer_.max_size()`.
   * Position after the write must be representable as `streamoff`.
@@ -2158,7 +2158,7 @@ Otherwise:
 
 *Error conditions:*
 
-* `file_too_large` - if `!empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
+* `file_too_large` - if `!ranges::empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
 #### 29.1.?.?.? Buffer management [memory.stream.buffer]
 
@@ -2325,7 +2325,7 @@ input_file_stream(native_handle_type handle);
 streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
 
 *Returns:* The amount of bytes read.
 
@@ -2371,7 +2371,7 @@ output_file_stream(native_handle_type handle);
 streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
 
 *Returns:* The amount of bytes written.
 
@@ -2420,7 +2420,7 @@ file_stream(native_handle_type handle);
 streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
 
 *Returns:* The amount of bytes read.
 
@@ -2432,7 +2432,7 @@ streamsize read_some(span<byte> buffer);
 streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
 
 *Returns:* The amount of bytes written.
 
