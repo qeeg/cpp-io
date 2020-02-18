@@ -997,6 +997,19 @@ void seek_position(base_position base, streamoff offset);
 * `invalid_argument` - if resulting position is negative and the stream doesn't support that.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or is greater than the maximum size supported by the stream.
 
+```c++
+template <typename T>
+constexpr streamoff @_move_position_@(T position, streamoff offset); // exposition only
+```
+
+*Returns:* `position + offset`.
+
+*Throws:* `io_error` in case of error.
+
+*Error conditions:*
+
+* `value_too_large` - if `position + offset` would overflow or cannot be represented as type `streamoff`.
+
 ## 29.1.? Customization points for unformatted IO [io.raw]
 
 ### 29.1.?.1 `io::read_raw` [io.read.raw]
@@ -1193,7 +1206,7 @@ constexpr void set_format(format f) noexcept;
 
 ```c++
 template <typename T, typename I, typename... Args>
-concept @_customly-readable-from_@ =
+concept @_customly-readable-from_@ = // exposition only
 	(input_stream<I> || input_context<I>) &&
 	requires(T object, I& i, Args&&... args)
 	{
@@ -1203,7 +1216,7 @@ concept @_customly-readable-from_@ =
 
 ```c++
 template <typename T, typename O, typename... Args>
-concept @_customly-writable-to_@ =
+concept @_customly-writable-to_@ = // exposition only
 	(output_stream<O> || output_context<O>) &&
 	requires(const T object, O& o, Args&&... args)
 	{
@@ -1354,7 +1367,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -1479,7 +1492,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -1607,7 +1620,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -1768,7 +1781,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -1925,7 +1938,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2095,7 +2108,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
