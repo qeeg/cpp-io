@@ -14,15 +14,38 @@ This paper proposes fundamental IO concepts, customization points for serializat
 
 # Motivation
 
-C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO but it has many drawbacks:
+C++ has text streams for a long time. However, there is no comfortable way to read and write binary data. One can argue that it is possible to [ab]use `char`-based text streams that provide unformatted IO like so:
+
+```c++
+int my_value = 42;
+
+{
+	std::ofstream stream{"test.bin", std::ios_base::out |
+		std::ios_base::binary};
+	stream.write(reinterpret_cast<const char*>(&my_value), sizeof(my_value));
+}
+
+int read_value;
+
+{
+	std::ifstream stream{"test.bin", std::ios_base::in | std::ios_base::binary};
+	stream.read(reinterpret_cast<char*>(&read_value), sizeof(read_value));
+}
+
+assert(read_value == my_value);
+```
+
+But it has many drawbacks:
 
 * The API still works in terms of `char` so if you use `std::byte` in your code base, you have to `reinterpret_cast` when calling `read` and `write` member functions of streams.
+* You have to pass the size manually.
+* The bytes are copied as-is so you have to arrange them manually, for example, if you want specific endianness.
 * Streams operate in terms of `std::char_traits` which is not needed when doing binary IO and only complicates the API. In particular, `std::ios::pos_type` is a very painful type to work with but is required in many IO operations.
 * Stream open mode is badly designed and you'd always want to make sure to force it to have `std::ios_base::binary`.
 * Stream objects carry a lot of text formatting flags that are irrelevant when doing binary IO. This leads to wasted memory.
 * By default, stream operations don't throw exceptions. This usually means some wrapper code to force exceptions.
 * If you want to do IO in memory, you're stuck with string streams that operate using `std::string`. Most binary data is stored in `std::vector<std::byte>` which leads to loss of performance due to unnecessary copies.
-* There is no agreed standard for customization points for binary IO.
+* There is no agreed standard for customization points for binary IO and serialization.
 
 This proposal tries to fix all mentioned issues.
 
@@ -668,7 +691,7 @@ TODO: More tutorials? More explanations.
 
 The reference implementation is here: [@IMPL]
 
-Most of the proposal can be implemented in ISO C++. Low level conversions inside `std::io::read` and `std::io::write` require knowledge of implementation defined format of integers and floating point numbers. File IO requires calling operating system API. The following table provides some examples:
+Most of the proposal can be implemented in ISO C++. Endianness conversion of integers can be written in ISO C++ by using arithmetic shifts. Conversion of floating point numbers requires knowledge of their implementation-defined format. File IO requires calling operating system API. The following table provides some examples:
 
 | Function        | POSIX   | Windows            | UEFI                            |
 | --------------- | ------- | ------------------ | ------------------------------- |
