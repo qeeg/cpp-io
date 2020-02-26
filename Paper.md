@@ -110,28 +110,28 @@ Thoughts on [@CEREAL]:
 * Concrete class templates have been transformed as follows:
   * `std::basic_istringstream` -> `std::io::basic_input_memory_stream`.
   * `std::basic_ostringstream` -> `std::io::basic_output_memory_stream`.
-  * `std::basic_stringstream` -> `std::io::basic_memory_stream`.
+  * `std::basic_stringstream` -> `std::io::basic_input_output_memory_stream`.
   * `std::basic_ifstream` -> `std::io::input_file_stream`.
   * `std::basic_ofstream` -> `std::io::output_file_stream`.
-  * `std::basic_fstream` -> `std::io::file_stream`.
+  * `std::basic_fstream` -> `std::io::input_output_file_stream`.
 * The `streambuf` part of legacy text streams has been dropped.
 * Fixed size streams have been added:
   * `std::io::input_span_stream`.
   * `std::io::output_span_stream`.
-  * `std::io::span_stream`.
+  * `std::io::input_output_span_stream`.
 * Since the explicit goal of this proposal is to do IO in terms of `std::byte`, `CharT` and `Traits` template parameters have been removed.
 * All text formatting flags have been removed. A new class `std::io::format` has been introduced for binary format. The format is no longer a part of stream classes but is constructed on demand during [de]serialization as part of IO context.
 * Parts of legacy text streams related to `std::ios_base::iostate` have been removed. It is better to report any specific errors via exceptions and since binary files usually have fixed layout and almost always start chunks of data with size, any kind of IO error is usually unrecoverable.
 * `std::ios_base::openmode` has been split into `std::io::mode` and `std::io::creation` that are modeled after the ones from [@P1031R2].
-* Since there is no more buffering (as of this revision) because of lack of `streambuf` and operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
+* Since operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
   * `tellg` and `tellp` -> `get_position`.
   * Single argument versions of `seekg` and `seekp` -> `set_position`.
   * Double argument versions of `seekg` and `seekp` -> `seek_position`.
-  * `peek`, `putback`, `unget` and `flush` member functions were removed.
 * `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::base_position`.
-* `getline` and `ignore` member functions were removed because they don't make sense during binary IO.
+* `getline`, `ignore`, `peek`, `putback` and `unget` member functions were removed because they don't make sense during binary IO and require unnecessary overhead.
+* `sync` and `flush` were merged into a single `flush` member function that either discards the input buffer of flushes the output buffer. These member functions are optional because buffering is not always useful.
 * Since it is not always possible to read or write all requested bytes in one system call (especially during networking), the interface has been changed accordingly:
   * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
   * `std::io::output_stream` requires `write_some` member function that writes one or more bytes to the stream and returns amount of bytes written.
@@ -852,7 +852,7 @@ concept writable_to = @_see below_@;
 // Span streams
 class input_span_stream;
 class output_span_stream;
-class span_stream;
+class input_output_span_stream;
 
 // Memory streams
 template <typename Container>
@@ -860,11 +860,11 @@ class basic_input_memory_stream;
 template <typename Container>
 class basic_output_memory_stream;
 template <typename Container>
-class basic_memory_stream;
+class basic_input_output_memory_stream;
 
 using input_memory_stream = basic_input_memory_stream<vector<byte>>;
 using output_memory_stream = basic_output_memory_stream<vector<byte>>;
-using memory_stream = basic_memory_stream<vector<byte>>;
+using input_output_memory_stream = basic_memory_stream<vector<byte>>;
 
 // File streams
 
@@ -884,7 +884,7 @@ enum class creation
 class file_stream_base;
 class input_file_stream;
 class output_file_stream;
-class file_stream;
+class input_output_file_stream;
 
 }
 }
@@ -1598,15 +1598,15 @@ constexpr void set_buffer(span<byte> new_buffer) noexcept;
 * `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
 * `position_ == 0`.
 
-### 29.1.?.3 Class `span_stream` [span.stream]
+### 29.1.?.3 Class `input_output_span_stream` [io.span.stream]
 
 ```c++
-class span_stream final
+class input_output_span_stream final
 {
 public:
 	// Constructors
-	constexpr span_stream() noexcept;
-	constexpr span_stream(span<byte> buffer) noexcept;
+	constexpr input_output_span_stream() noexcept;
+	constexpr input_output_span_stream(span<byte> buffer) noexcept;
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -1630,10 +1630,10 @@ private:
 
 TODO
 
-#### 29.1.?.?.? Constructors [span.stream.cons]
+#### 29.1.?.?.? Constructors [io.span.stream.cons]
 
 ```c++
-constexpr span_stream() noexcept;
+constexpr input_output_span_stream() noexcept;
 ```
 
 *Ensures:*
@@ -1642,7 +1642,7 @@ constexpr span_stream() noexcept;
 * `position_ == 0`.
 
 ```c++
-constexpr span_stream(span<byte> buffer) noexcept;
+constexpr input_output_span_stream(span<byte> buffer) noexcept;
 ```
 
 *Ensures:*
@@ -1651,7 +1651,7 @@ constexpr span_stream(span<byte> buffer) noexcept;
 * `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
 * `position_ == 0`.
 
-#### 29.1.?.?.? Position [output.span.stream.position]
+#### 29.1.?.?.? Position [io.span.stream.position]
 
 ```c++
 constexpr streamoff get_position() const noexcept;
@@ -1685,7 +1685,7 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `ptrdiff_t`.
 
-#### 29.1.?.?.? Reading [span.stream.read]
+#### 29.1.?.?.? Reading [io.span.stream.read]
 
 ```c++
 constexpr streamsize read_some(span<byte> buffer);
@@ -1708,7 +1708,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 * `value_too_large` - if `!ranges::empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
-#### 29.1.?.?.? Writing [span.stream.write]
+#### 29.1.?.?.? Writing [io.span.stream.write]
 
 ```c++
 constexpr streamsize write_some(span<const byte> buffer);
@@ -1731,7 +1731,7 @@ After that writes that amount of bytes from the given buffer to the stream and a
 
 * `file_too_large` - if `!ranges::empty(buffer) && ((position_ == ranges::ssize(buffer_)) || (position_ == numeric_limits<streamoff>::max()))`.
 
-#### 29.1.?.?.? Buffer management [span.stream.buffer]
+#### 29.1.?.?.? Buffer management [io.span.stream.buffer]
 
 ```c++
 constexpr span<byte> get_buffer() const noexcept;
@@ -2075,17 +2075,17 @@ constexpr void reset_buffer() noexcept;
 
 *Ensures:* `position_ == 0`.
 
-### 29.1.?.3 Class template `basic_memory_stream` [memory.stream]
+### 29.1.?.3 Class template `basic_input_output_memory_stream` [io.memory.stream]
 
 ```c++
 template <typename Container>
-class basic_memory_stream final
+class basic_input_output_memory_stream final
 {
 public:
 	// Constructors
-	constexpr basic_memory_stream();
-	constexpr basic_memory_stream(const Container& c);
-	constexpr basic_memory_stream(Container&& c);
+	constexpr basic_input_output_memory_stream();
+	constexpr basic_input_output_memory_stream(const Container& c);
+	constexpr basic_input_output_memory_stream(Container&& c);
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
@@ -2112,10 +2112,10 @@ private:
 
 TODO
 
-#### 29.1.?.?.? Constructors [memory.stream.cons]
+#### 29.1.?.?.? Constructors [io.memory.stream.cons]
 
 ```c++
-constexpr basic_memory_stream();
+constexpr basic_input_output_memory_stream();
 ```
 
 *Ensures:*
@@ -2124,7 +2124,7 @@ constexpr basic_memory_stream();
 * `position_ == 0`.
 
 ```c++
-constexpr basic_memory_stream(const Container& c);
+constexpr basic_input_output_memory_stream(const Container& c);
 ```
 
 *Effects:* Initializes `buffer_` with `c`.
@@ -2132,14 +2132,14 @@ constexpr basic_memory_stream(const Container& c);
 *Ensures:* `position_ == 0`.
 
 ```c++
-constexpr basic_memory_stream(Container&& c);
+constexpr basic_input_output_memory_stream(Container&& c);
 ```
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
 *Ensures:* `position_ == 0`.
 
-#### 29.1.?.?.? Position [memory.stream.position]
+#### 29.1.?.?.? Position [io.memory.stream.position]
 
 ```c++
 constexpr streamoff get_position();
@@ -2173,7 +2173,7 @@ constexpr void seek_position(base_position base, streamoff offset = 0);
 * `invalid_argument` - if resulting position is negative.
 * `value_too_large` - if resulting position cannot be represented as type `streamoff` or `typename Container::difference_type`.
 
-#### 29.1.?.?.? Reading [memory.stream.read]
+#### 29.1.?.?.? Reading [io.memory.stream.read]
 
 ```c++
 constexpr streamsize read_some(span<byte> buffer);
@@ -2196,7 +2196,7 @@ After that reads that amount of bytes from the stream to the given buffer and ad
 
 * `value_too_large` - if `!ranges::empty(buffer)` and `position_ == numeric_limits<streamoff>::max()`.
 
-#### 29.1.?.?.? Writing [memory.stream.write]
+#### 29.1.?.?.? Writing [io.memory.stream.write]
 
 ```c++
 constexpr streamsize write_some(span<const byte> buffer);
@@ -2229,7 +2229,7 @@ Otherwise:
 
 * `file_too_large` - if `!ranges::empty(buffer) && ((position_ == buffer_.max_size()) || (position_ == numeric_limits<streamoff>::max()))`.
 
-#### 29.1.?.?.? Buffer management [memory.stream.buffer]
+#### 29.1.?.?.? Buffer management [io.memory.stream.buffer]
 
 ```c++
 constexpr const Container& get_buffer() const & noexcept;
@@ -2306,7 +2306,7 @@ protected:
 	file_stream_base& operator=(const file_stream_base&) = delete;
 	file_stream_base& operator=(file_stream_base&&);
 	
-	span_stream buffer_; // exposition only
+	input_output_span_stream buffer_; // exposition only
 ```
 
 TODO
@@ -2467,17 +2467,17 @@ streamsize write_some(span<const byte> buffer);
 
 *Throws:* TODO
 
-### 29.1.?.? Class `file_stream` [file.stream]
+### 29.1.?.? Class `input_output_file_stream` [io.file.stream]
 
 ```c++
-class file_stream final : public file_stream_base
+class input_output_file_stream final : public file_stream_base
 {
 public:
 	// Construct/copy/destroy
-	file_stream() noexcept = default;
-	file_stream(const filesystem::path& file_name,
+	input_output_file_stream() noexcept = default;
+	input_output_file_stream(const filesystem::path& file_name,
 		creation c = creation::if_needed);
-	file_stream(native_handle_type handle);
+	input_output_file_stream(native_handle_type handle);
 
 	// Reading
 	streamsize read_some(span<byte> buffer);
@@ -2489,22 +2489,22 @@ public:
 
 TODO
 
-#### 29.1.?.?.? Constructors [file.stream.cons]
+#### 29.1.?.?.? Constructors [io.file.stream.cons]
 
 ```c++
-file_stream(const filesystem::path& file_name,
+input_output_file_stream(const filesystem::path& file_name,
 	creation c = creation::if_needed);
 ```
 
 *Effects:* Initializes the base class with `file_stream_base(file_name, mode::write, c)`.
 
 ```c++
-file_stream(native_handle_type handle);
+input_output_file_stream(native_handle_type handle);
 ```
 
 *Effects:* Initializes the base class with `file_stream_base(handle)`.
 
-#### 29.1.?.?.? Reading [file.stream.read]
+#### 29.1.?.?.? Reading [io.file.stream.read]
 
 ```c++
 streamsize read_some(span<byte> buffer);
@@ -2524,7 +2524,7 @@ streamsize read_some(span<byte> buffer);
 
 *Throws:* TODO
 
-#### 29.1.?.?.? Writing [file.stream.write]
+#### 29.1.?.?.? Writing [io.file.stream.write]
 
 ```c++
 streamsize write_some(span<const byte> buffer);
