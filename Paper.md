@@ -1,7 +1,7 @@
 ---
 title: Modern std::byte stream IO for C++
 document: DXXXXR0
-date: 2019-11-19
+date: 2020-02-26
 audience: LEWGI
 author:
   - name: Lyberta
@@ -37,7 +37,7 @@ This proposal is based on author's serialization library which was initially wri
 
 The following lessons were learned during development:
 
-* Endianness is of utmost importance. Standard MIDI files are always big-endian. Network byte order is big endian. RIFF can be either big or little. Most newer formats are little-endian. A user must be in control of endianness at all times. There should be transparent way to do endianness conversion. Endianness may change in the middle of the file in case of container formats such as RIFF MIDI.
+* Endianness is of utmost importance. Standard MIDI files are always big-endian. Network byte order is big-endian. RIFF can be either big or little. Most newer formats are little-endian. A user must be in control of endianness at all times. There should be transparent way to do endianness conversion. Endianness may change in the middle of the file in case of container formats such as RIFF MIDI.
 * Integers should be two's complement by default. While C++98 through C++17 allowed integers to be stored as ones' complement or sign+magnitude, the author is not aware of any file format that uses those representations. C++20 requires integers to be two's complement. A user working with exotic format can supply user defined type that does bit fiddling manually. Such is the case with WebAssembly that uses LEB128 for integers.
 * There should be a way to read and write floating point types in ISO 60559 `binaryN` formats regardless of the native format of floating point types. Most formats store floating point values in ISO 60559 formats. If floating point types provided by the implementation such as `float` and `double` are not ISO 60559, then the implementation is effectively cut off from the rest of the world unless there are conversion functions. Though the recent rise of `bfloat16` format shows that storage of floating point numbers continues to evolve.
 
@@ -47,7 +47,7 @@ The following problems were encountered:
 * There was no sound way to express a range of bytes. This was fixed by `std::span` in C++20.
 * There was no portable way to determine the native endianness, especially since sizes of all fundamental types can be 1 and all fixed-width types are optional. This was fixed by `std::endian` in C++20.
 * There was no easy way to convert integers from native representation to two's complement and vice versa. This was fixed by requiring all integers to be two's complement in C++20.
-* There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal ([@P1272R2]) but it doesn't solve the general case because C++ allows systems that are neither big nor little endian.
+* There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal ([@P1272R2]) but it doesn't solve the general case because C++ allows systems that are neither big- nor little-endian.
 * There is no easy way to convert floating point number from native represenation to ISO/IEC 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [@P1468R2] should fix this.
 
 While the author thinks that having endianness and floating point convertion functions available publicly is a good idea, they leave them as implementation details in this paper.
@@ -226,7 +226,7 @@ int main()
 	std::io::output_memory_stream stream;
 	
 	// Create a context with specific binary format.
-	// Here we want our data in the stream to be in big endian byte order.
+	// Here we want our data in the stream to be in big-endian byte order.
 	std::io::default_context context{stream, std::endian::big};
 
 	// Write the value to the stream using our format.
@@ -268,7 +268,7 @@ struct MyType
 
 	void read(std::io::input_stream auto& stream)
 	{
-		// We really want only big endian byte order here.
+		// We really want only big-endian byte order here.
 		std::io::default_context context{stream, std::endian::big};
 		std::io::read(a, context);
 		std::io::read(b, context);
@@ -276,7 +276,7 @@ struct MyType
 
 	void write(std::io::output_stream auto& stream) const
 	{
-		// We really want only big endian byte order here.
+		// We really want only big-endian byte order here.
 		std::io::default_context context{stream, std::endian::big};
 		std::io::write(a, context);
 		std::io::write(b, context);
@@ -680,6 +680,40 @@ Most of the proposal can be implemented in ISO C++. Low level conversions inside
 | `read_some`     | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
 | `write_some`    | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
 
+## Benchmarks
+
+Hardware:
+
+* CPU: AMD Ryzen 7 2700X running at 3.7 GHz
+* RAM: 2 x 8 GiB DDR4 running at 3533 MHz
+* Storage: Samsung 970 EVO 500GB (NVMe, PCIe 3.0 x4)
+
+Software:
+
+* OS: Debian Testing (Bullseye)
+* Kernel: Linux 5.5-rc5.
+* Compiler: GCC trunk (February 2020)
+
+### Reading 10 million of random `std::size_t` values from file sequentially
+
+| Type                       | Time (ms) |
+| -------------------------- | --------- |
+| std::FILE                  | 116.952   |
+| std::ifstream              | 150.945   |
+| std::io::input_file_stream | 82.5931   |
+
+`std::io::input_file_stream` is ~30% faster than `std::FILE` and ~45% faster then `std::ifstream`.
+
+### Writing 10 million of random `std::size_t` values to file sequentially
+
+| Type                        | Time (ms) |
+| --------------------------- | --------- |
+| std::FILE                   | 144.398   |
+| std::ofstream               | 219.354   |
+| std::io::output_file_stream | 89.7394   |
+
+`std::io::output_file_stream` is ~38% faster than `std::FILE` and ~60% faster than `std::ofstream`.
+
 # Future work
 
 It is hopeful that `std::io::format` will be used to handle Unicode encoding schemes during file and network IO so Unicode layer will only need to handle encoding forms.
@@ -691,7 +725,6 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if [@P1468R2] is accepted.
-* Buffering for file IO.
 * Binary versions of `std::cin`, `std::cout` and `std::cerr`.
 * Vectored IO.
 * `constexpr` file streams as a generalization of `std::embed`.
@@ -2231,6 +2264,9 @@ public:
 	streamoff get_position() const;
 	void set_position(streamoff position);
 	void seek_position(base_position base, streamoff offset = 0);
+	
+	// Buffering
+	void flush();
 
 	// Native handle management
 	native_handle_type native_handle();
@@ -2246,6 +2282,8 @@ protected:
 	~file_stream_base();
 	file_stream_base& operator=(const file_stream_base&) = delete;
 	file_stream_base& operator=(file_stream_base&&);
+	
+	span_stream buffer_; // exposition only
 ```
 
 TODO
@@ -2288,7 +2326,7 @@ streamoff get_position() const;
 void set_position(streamoff position);
 ```
 
-*Effects:* Sets the position of the stream to the given value.
+*Effects:* Calls `flush()` and then sets the position of the stream to the given value.
 
 *Throws:* TODO
 
@@ -2296,7 +2334,17 @@ void set_position(streamoff position);
 void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* TODO
+*Effects:* Calls `flush()` and then seeks the position of the stream according to the given base position and offset.
+
+*Throws:* TODO
+
+#### 29.1.?.?.? Buffering [file.stream.base.buffer]
+
+```c++
+void flush();
+```
+
+*Effects:* If the last operation on the stream was input, resets the internal buffer. If the last operation on the stream was output, writes the contents of the internal buffer to the file and then resets the internal buffer.
 
 *Throws:* TODO
 
@@ -2338,9 +2386,12 @@ input_file_stream(native_handle_type handle);
 streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise:
 
-*Returns:* The amount of bytes read.
+* If the internal buffer is empty, reads zero or more bytes from the file into the internal buffer.
+* Calls `buffer_.read_some(buffer)`.
+
+*Returns:* The amount of bytes read from the internal buffer.
 
 *Throws:* TODO
 
@@ -2384,9 +2435,12 @@ output_file_stream(native_handle_type handle);
 streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise:
 
-*Returns:* The amount of bytes written.
+* If the internal buffer is full, calls `flush()`.
+* Calls `buffer_.write_some(buffer)`.
+
+*Returns:* The amount of bytes written to the internal buffer.
 
 *Throws:* TODO
 
@@ -2433,9 +2487,17 @@ file_stream(native_handle_type handle);
 streamsize read_some(span<byte> buffer);
 ```
 
-*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise reads zero or more bytes from the stream and advances the position by the amount of bytes read.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise:
 
-*Returns:* The amount of bytes read.
+* If the last operation on the stream was output:
+  * Calls `flush()`.
+  * Reads zero or more bytes from the file to the internal buffer.
+  * Calls `buffer_.read_some(buffer)`.
+* If the last operation on the stream was input:
+  * If the internal buffer is empty, reads zero or more bytes from the file to the internal buffer.
+  * Calls `buffer_.read_some(buffer)`.
+
+*Returns:* The amount of bytes read from the internal buffer.
 
 *Throws:* TODO
 
@@ -2445,9 +2507,16 @@ streamsize read_some(span<byte> buffer);
 streamsize write_some(span<const byte> buffer);
 ```
 
-*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise writes one or more bytes to the stream and advances the position by the amount of bytes written.
+*Effects:* If `ranges::empty(buffer)`, returns `0`. Otherwise:
 
-*Returns:* The amount of bytes written.
+* If the last operation on the stream was input:
+  * Resets the internal buffer.
+  * Calls `buffer_.write_some(buffer)`.
+* If the last operation on the stream was output:
+  * If the internal buffer is full, calls `flush()`.
+  * Calls `buffer_.write_some(buffer)`.
+
+*Returns:* The amount of bytes written to the internal buffer.
 
 *Throws:* TODO
 
