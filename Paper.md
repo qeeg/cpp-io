@@ -805,6 +805,8 @@ template <typename T>
 concept output_stream = @_see below_@;
 template <typename T>
 concept stream = @_see below_@;
+template <typename T>
+concept input_output_stream = @_see below_@;
 
 enum class base_position
 {
@@ -815,6 +817,8 @@ enum class base_position
 
 template <typename T>
 concept seekable_stream = @_see below_@;
+template <typename T>
+concept buffered_stream = @_see below_@;
 
 // Customization points for unformatted IO
 inline constexpr @_unspecified_@ read_raw = @_unspecified_@;
@@ -848,6 +852,11 @@ template <typename T, typename I, typename... Args>
 concept readable_from = @_see below_@;
 template <typename T, typename O, typename... Args>
 concept writable_to = @_see below_@;
+
+// Polymorphic stream wrappers
+class any_input_stream;
+class any_output_stream;
+class any_input_output_stream;
 
 // Span streams
 class input_span_stream;
@@ -996,6 +1005,15 @@ concept stream = input_stream<T> || output_stream<T>;
 
 TODO
 
+#### 29.1.?.? Concept `input_output_stream` [stream.concept.io]
+
+```c++
+template <typename T>
+concept input_output_stream = input_stream<T> && output_stream<T>;
+```
+
+TODO
+
 ### 29.1.?.? Concept `seekable_stream` [stream.concept.seekable]
 
 ```c++
@@ -1065,6 +1083,28 @@ constexpr streamoff @_move_position_@(T position, streamoff offset); // expositi
 *Error conditions:*
 
 * `value_too_large` - if `position + offset` would overflow or cannot be represented as type `streamoff`.
+
+### 29.1.?.? Concept `buffered_stream` [stream.concept.buffered]
+
+```c++
+template <typename T>
+concept buffered_stream = stream<T> && requires(T s)
+	{
+		s.flush();
+	};
+```
+
+TODO
+
+#### 29.1.?.?.? Buffering [buffered.stream.buffer]
+
+```c++
+void flush();
+```
+
+*Effects:* If the last operation on the stream was input, resets the internal buffer. If the last operation on the stream was output, writes the contents of the internal buffer to the stream and then resets the internal buffer.
+
+*Throws:* TODO
 
 ## 29.1.? Customization points for unformatted IO [io.raw]
 
@@ -1345,6 +1385,925 @@ concept writable_to =
 ```
 
 TODO
+
+## 29.1.? Polymorphic stream wrappers [any.streams]
+
+### 29.1.?.1 Class `any_input_stream` [any.input.stream]
+
+```c++
+class any_input_stream final
+{
+public:
+	// Constructors and destructor
+	constexpr any_input_stream() noexcept;
+	template <input_stream S>
+	constexpr any_input_stream(S&& s);
+	template <input_stream S, typename... Args>
+	requires constructible_from<S, Args...>
+	constexpr explicit any_input_stream(in_place_type_t<S>, Args&&... args);
+	constexpr any_input_stream(const any_input_stream& other);
+	constexpr any_input_stream(any_input_stream&& other) noexcept;
+	constexpr ~any_input_stream();
+	
+	// Assignment
+	constexpr any_input_stream& operator=(const any_input_stream& other);
+	constexpr any_input_stream& operator=(any_input_stream&& other) noexcept;
+	template <input_stream S>
+	constexpr any_input_stream& operator=(S&& s);
+	
+	// Observers
+	constexpr bool has_value() const noexcept;
+	constexpr const type_info& type() const noexcept;
+	template <input_stream S>
+	constexpr const S& get() const;
+	template <input_stream S>
+	constexpr S& get();
+	
+	// Modifiers
+	template <input_stream S, typename... Args>
+	requires constructible_from<S, Args...>
+	constexpr void emplace(Args&&... args);
+	template <input_stream S>
+	requires movable<S>
+	constexpr S release();
+	constexpr void reset() noexcept;
+	constexpr void swap(any_input_stream& other) noexcept;
+	
+	// Position
+	constexpr streamoff get_position() const;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(base_position base, streamoff offset);
+	
+	// Buffering
+	constexpr void flush();
+	
+	// Reading
+	constexpr streamsize read_some(span<byte> buffer);
+};
+```
+
+TODO
+
+#### 29.1.?.?.? Constructors and destructor [any.input.stream.cons]
+
+```c++
+constexpr any_input_stream() noexcept;
+```
+
+*Postconditions:* `has_value() == false`.
+
+```c++
+template <input_stream S>
+constexpr any_input_stream(S&& s);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Constructs an object of type `any_input_stream` that contains an object of type `VS` direct-initialized with `forward<S>(s)`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+```c++
+template <input_stream S, typename... Args>
+requires constructible_from<S, Args...>
+constexpr explicit any_input_stream(in_place_type_t<S>, Args&&... args);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Initializes the contained stream as if direct-non-list-initializing an object of type `VS` with the arguments `forward<Args>(args)...`.
+
+*Postconditions:* `*this` contains a stream of type `VS`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+```c++
+constexpr any_input_stream(const any_input_stream& other);
+```
+
+*Effects:* If `other.has_value() == false`, constructs an object that has no stream. Otherwise, if contained stream of `other` is not copyable, throws exception. Otherwise, equivalent to `any_input_stream(in_place_type_t<S>, other.get())` where `S` is the type of the contained stream.
+
+*Throws:* `io_error` if contained stream of `other` is not copyable. Otherwise, any exception thrown by the selected constructor of `S`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if contained stream of `other` is not copyable.
+
+```c++
+constexpr any_input_stream(any_input_stream&& other) noexcept;
+```
+
+*Effects:* If `other.has_value() == false`, constructs an object that has no stream. Otherwise, constructs an object of type `any_input_stream` that contains the contained stream of `other`.
+
+*Postconditions:* `other.has_value() == false`.
+
+```c++
+constexpr ~any_input_stream();
+```
+
+*Effects:* As if by `reset()`.
+
+#### 29.1.?.?.? Assignment [any.input.stream.assign]
+
+```c++
+constexpr any_input_stream& operator=(const any_input_stream& other);
+```
+
+*Effects:* As if by `any_input_stream(other).swap(*this)`. No effects if an exception is thrown.
+
+*Returns:* `*this`.
+
+*Throws:* Any exceptions arising from the copy constructor for the contained stream.
+
+```c++
+constexpr any_input_stream& operator=(any_input_stream&& other) noexcept;
+```
+
+*Effects:* As if by `any_input_stream(move(other)).swap(*this)`.
+
+*Returns:* `*this`.
+
+*Postconditions:* The state of `*this` is equivalent to the original state of `other`.
+
+```c++
+template <input_stream S>
+constexpr any_input_stream& operator=(S&& s);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Constructs an object `tmp` of type `any_input_stream` that contains a stream of type `VS` direct-initialized with `std::forward<S>(s)`, and `tmp.swap(*this)`. No effects if an exception is thrown.
+
+*Returns:* `*this`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+#### 29.1.?.?.? Observers [any.input.stream.observers]
+
+```c++
+constexpr bool has_value() const noexcept;
+```
+
+*Returns:* `true` if `*this` contains a stream, otherwise `false`.
+
+```c++
+constexpr const type_info& type() const noexcept;
+```
+
+*Returns:* `typeid(S)` if `*this` contains a stream of type `S`, otherwise `typeid(void)`.
+
+```c++
+template <input_stream S>
+constexpr const S& get() const;
+template <input_stream S>
+constexpr S& get();
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Returns:* Reference to the contained stream.
+
+*Throws:* `bad_any_cast` if `type() != typeid(VS)`.
+
+#### 29.1.?.?.? Modifiers [any.input.stream.modifiers]
+
+```c++
+template <input_stream S, typename... Args>
+requires constructible_from<S, Args...>
+constexpr void emplace(Args&&... args);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Calls `reset()`. Then initializes the contained stream as if direct-non-list-initializing an object of type `VS` with the arguments `forward<Args>(args)...`.
+
+*Postconditions:* `*this` contains a stream of type `VS`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+*Remarks:* If an exception is thrown during the call to `VS`’s constructor, `*this` does not contain a stream, and any previously contained stream has been destroyed.
+
+```c++
+template <input_stream S>
+requires movable<S>
+constexpr S release();
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Postconditions:* `has_value() == false`.
+
+*Returns:* The stream of type `S` constructed from the contained stream considering that contained stream as an rvalue.
+
+*Throws:* `bad_any_cast` if `type() != typeid(VS)`.
+
+```c++
+constexpr void reset() noexcept;
+```
+
+*Effects:* If `has_value() == true`, destroys the contained stream.
+
+*Postconditions:* `has_value() == false`.
+
+```c++
+constexpr void swap(any_input_stream& other) noexcept;
+```
+
+*Effects:* Exchanges the states of `*this` and `other`.
+
+#### 29.1.?.?.? Position [any.input.stream.position]
+
+```c++
+constexpr streamoff get_position() const;
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Returns:* `s.get_position()`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+```c++
+constexpr void set_position(streamoff position);
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* Calls `s.set_position(position)`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+```c++
+constexpr void seek_position(base_position base, streamoff offset);
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* Calls `s.seek_position(base, offset)`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+#### 29.1.?.?.? Buffering [any.input.stream.buffer]
+
+```c++
+constexpr void flush();
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* If `!buffered_stream<S>`, does nothing. Otherwise, calls `s.flush()`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
+
+#### 29.1.?.?.? Reading [any.input.stream.read]
+
+```c++
+constexpr streamsize read_some(span<byte> buffer);
+```
+
+Let `s` be the contained stream of `*this`.
+
+*Returns:* `s.read_some(buffer)`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
+
+### 29.1.?.2 Class `any_output_stream` [any.output.stream]
+
+```c++
+class any_output_stream final
+{
+public:
+	// Constructors and destructor
+	constexpr any_output_stream() noexcept;
+	template <output_stream S>
+	constexpr any_output_stream(S&& s);
+	template <output_stream S, typename... Args>
+	requires constructible_from<S, Args...>
+	constexpr explicit any_output_stream(in_place_type_t<S>, Args&&... args);
+	constexpr any_output_stream(const any_output_stream& other);
+	constexpr any_output_stream(any_output_stream&& other) noexcept;
+	constexpr ~any_output_stream();
+	
+	// Assignment
+	constexpr any_output_stream& operator=(const any_output_stream& other);
+	constexpr any_output_stream& operator=(any_output_stream&& other) noexcept;
+	template <output_stream S>
+	constexpr any_output_stream& operator=(S&& s);
+	
+	// Observers
+	constexpr bool has_value() const noexcept;
+	constexpr const type_info& type() const noexcept;
+	template <output_stream S>
+	constexpr const S& get() const;
+	template <output_stream S>
+	constexpr S& get();
+	
+	// Modifiers
+	template <output_stream S, typename... Args>
+	requires constructible_from<S, Args...>
+	constexpr void emplace(Args&&... args);
+	template <output_stream S>
+	requires movable<S>
+	constexpr S release();
+	constexpr void reset() noexcept;
+	constexpr void swap(any_output_stream& other) noexcept;
+	
+	// Position
+	constexpr streamoff get_position() const;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(base_position base, streamoff offset);
+	
+	// Buffering
+	constexpr void flush();
+	
+	// Writing
+	constexpr streamsize write_some(span<const byte> buffer);
+};
+```
+
+TODO
+
+#### 29.1.?.?.? Constructors and destructor [any.output.stream.cons]
+
+```c++
+constexpr any_output_stream() noexcept;
+```
+
+*Postconditions:* `has_value() == false`.
+
+```c++
+template <output_stream S>
+constexpr any_output_stream(S&& s);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Constructs an object of type `any_output_stream` that contains an object of type `VS` direct-initialized with `forward<S>(s)`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+```c++
+template <output_stream S, typename... Args>
+requires constructible_from<S, Args...>
+constexpr explicit any_output_stream(in_place_type_t<S>, Args&&... args);
+```
+
+*Effects:* Initializes the contained stream as if direct-non-list-initializing an object of type `VS` with the arguments `forward<Args>(args)...`.
+
+*Postconditions:* `*this` contains a stream of type `VS`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+```c++
+constexpr any_output_stream(const any_output_stream& other);
+```
+
+*Effects:* If `other.has_value() == false`, constructs an object that has no stream. Otherwise, if contained stream of `other` is not copyable, throws exception. Otherwise, equivalent to `any_output_stream(in_place_type_t<S>, other.get())` where `S` is the type of the contained stream.
+
+*Throws:* `io_error` if contained stream of `other` is not copyable. Otherwise, any exception thrown by the selected constructor of `S`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if contained stream of `other` is not copyable.
+
+```c++
+constexpr any_output_stream(any_output_stream&& other) noexcept;
+```
+
+*Effects:* If `other.has_value() == false`, constructs an object that has no stream. Otherwise, constructs an object of type `any_output_stream` that contains the contained stream of `other`.
+
+*Postconditions:* `other.has_value() == false`.
+
+```c++
+constexpr ~any_output_stream();
+```
+
+*Effects:* As if by `reset()`.
+
+#### 29.1.?.?.? Assignment [any.output.stream.assign]
+
+```c++
+constexpr any_output_stream& operator=(const any_output_stream& other);
+```
+
+*Effects:* As if by `any_output_stream(other).swap(*this)`. No effects if an exception is thrown.
+
+*Returns:* `*this`.
+
+*Throws:* Any exceptions arising from the copy constructor for the contained stream.
+
+```c++
+constexpr any_output_stream& operator=(any_output_stream&& other) noexcept;
+```
+
+*Effects:* As if by `any_output_stream(move(other)).swap(*this)`.
+
+*Returns:* `*this`.
+
+*Postconditions:* The state of `*this` is equivalent to the original state of `other`.
+
+```c++
+template <output_stream S>
+constexpr any_output_stream& operator=(S&& s);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Constructs an object `tmp` of type `any_output_stream` that contains a stream of type `VS` direct-initialized with `std::forward<S>(s)`, and `tmp.swap(*this)`. No effects if an exception is thrown.
+
+*Returns:* `*this`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+#### 29.1.?.?.? Observers [any.output.stream.observers]
+
+```c++
+constexpr bool has_value() const noexcept;
+```
+
+*Returns:* `true` if `*this` contains a stream, otherwise `false`.
+
+```c++
+constexpr const type_info& type() const noexcept;
+```
+
+*Returns:* `typeid(S)` if `*this` contains a stream of type `S`, otherwise `typeid(void)`.
+
+```c++
+template <output_stream S>
+constexpr const S& get() const;
+template <output_stream S>
+constexpr S& get();
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Returns:* Reference to the contained stream.
+
+*Throws:* `bad_any_cast` if `type() != typeid(VS)`.
+
+#### 29.1.?.?.? Modifiers [any.output.stream.modifiers]
+
+```c++
+template <output_stream S, typename... Args>
+requires constructible_from<S, Args...>
+constexpr void emplace(Args&&... args);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Calls `reset()`. Then initializes the contained stream as if direct-non-list-initializing an object of type `VS` with the arguments `forward<Args>(args)...`.
+
+*Postconditions:* `*this` contains a stream of type `VS`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+*Remarks:* If an exception is thrown during the call to `VS`’s constructor, `*this` does not contain a stream, and any previously contained stream has been destroyed.
+
+```c++
+template <output_stream S>
+requires movable<S>
+constexpr S release();
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Postconditions:* `has_value() == false`.
+
+*Returns:* The stream of type `S` constructed from the contained stream considering that contained stream as an rvalue.
+
+*Throws:* `bad_any_cast` if `type() != typeid(VS)`.
+
+```c++
+constexpr void reset() noexcept;
+```
+
+*Effects:* If `has_value() == true`, destroys the contained stream.
+
+*Postconditions:* `has_value() == false`.
+
+```c++
+constexpr void swap(any_output_stream& other) noexcept;
+```
+
+*Effects:* Exchanges the states of `*this` and `other`.
+
+#### 29.1.?.?.? Position [any.output.stream.position]
+
+```c++
+constexpr streamoff get_position() const;
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Returns:* `s.get_position()`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+```c++
+constexpr void set_position(streamoff position);
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* Calls `s.set_position(position)`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+```c++
+constexpr void seek_position(base_position base, streamoff offset);
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* Calls `s.seek_position(base, offset)`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+#### 29.1.?.?.? Buffering [any.output.stream.buffer]
+
+```c++
+constexpr void flush();
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* If `!buffered_stream<S>`, does nothing. Otherwise, calls `s.flush()`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
+
+#### 29.1.?.?.? Writing [any.output.stream.write]
+
+```c++
+constexpr streamsize write_some(span<const byte> buffer);
+```
+
+Let `s` be the contained stream of `*this`.
+
+*Returns:* `s.write_some(buffer)`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
+
+### 29.1.?.3 Class `any_input_output_stream` [any.io.stream]
+
+```c++
+class any_input_output_stream final
+{
+public:
+	// Constructors and destructor
+	constexpr any_input_output_stream() noexcept;
+	template <input_output_stream S>
+	constexpr any_input_output_stream(S&& s);
+	template <input_output_stream S, typename... Args>
+	requires constructible_from<S, Args...>
+	constexpr explicit any_input_output_stream(in_place_type_t<S>,
+		Args&&... args);
+	constexpr any_input_output_stream(const any_input_output_stream& other);
+	constexpr any_input_output_stream(any_input_output_stream&& other) noexcept;
+	constexpr ~any_input_output_stream();
+	
+	// Assignment
+	constexpr any_input_output_stream& operator=(
+		const any_input_output_stream& other);
+	constexpr any_input_output_stream& operator=(
+		any_input_output_stream&& other) noexcept;
+	template <input_output_stream S>
+	constexpr any_input_output_stream& operator=(S&& s);
+	
+	// Observers
+	constexpr bool has_value() const noexcept;
+	constexpr const type_info& type() const noexcept;
+	template <input_output_stream S>
+	constexpr const S& get() const;
+	template <input_output_stream S>
+	constexpr S& get();
+	
+	// Modifiers
+	template <input_output_stream S, typename... Args>
+	requires constructible_from<S, Args...>
+	constexpr void emplace(Args&&... args);
+	template <input_output_stream S>
+	requires movable<S>
+	constexpr S release();
+	constexpr void reset() noexcept;
+	constexpr void swap(any_input_output_stream& other) noexcept;
+	
+	// Position
+	constexpr streamoff get_position() const;
+	constexpr void set_position(streamoff position);
+	constexpr void seek_position(base_position base, streamoff offset);
+	
+	// Buffering
+	constexpr void flush();
+	
+	// Reading
+	constexpr streamsize read_some(span<byte> buffer);
+	
+	// Writing
+	constexpr streamsize write_some(span<const byte> buffer);
+};
+```
+
+TODO
+
+#### 29.1.?.?.? Constructors and destructor [any.io.stream.cons]
+
+```c++
+constexpr any_input_output_stream() noexcept;
+```
+
+*Postconditions:* `has_value() == false`.
+
+```c++
+template <input_output_stream S>
+constexpr any_input_output_stream(S&& s);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Constructs an object of type `any_input_output_stream` that contains an object of type `VS` direct-initialized with `forward<S>(s)`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+```c++
+template <input_output_stream S, typename... Args>
+requires constructible_from<S, Args...>
+constexpr explicit any_input_output_stream(in_place_type_t<S>, Args&&... args);
+```
+
+*Effects:* Initializes the contained stream as if direct-non-list-initializing an object of type `VS` with the arguments `forward<Args>(args)...`.
+
+*Postconditions:* `*this` contains a stream of type `VS`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+```c++
+constexpr any_input_output_stream(const any_input_output_stream& other);
+```
+
+*Effects:* If `other.has_value() == false`, constructs an object that has no stream. Otherwise, if contained stream of `other` is not copyable, throws exception. Otherwise, equivalent to `any_input_output_stream(in_place_type_t<S>, other.get())` where `S` is the type of the contained stream.
+
+*Throws:* `io_error` if contained stream of `other` is not copyable. Otherwise, any exception thrown by the selected constructor of `S`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if contained stream of `other` is not copyable.
+
+```c++
+constexpr any_input_output_stream(any_input_output_stream&& other) noexcept;
+```
+
+*Effects:* If `other.has_value() == false`, constructs an object that has no stream. Otherwise, constructs an object of type `any_input_output_stream` that contains the contained stream of `other`.
+
+*Postconditions:* `other.has_value() == false`.
+
+```c++
+constexpr ~any_input_output_stream();
+```
+
+*Effects:* As if by `reset()`.
+
+#### 29.1.?.?.? Assignment [any.io.stream.assign]
+
+```c++
+constexpr any_input_output_stream& operator=(
+	const any_input_output_stream& other);
+```
+
+*Effects:* As if by `any_input_output_stream(other).swap(*this)`. No effects if an exception is thrown.
+
+*Returns:* `*this`.
+
+*Throws:* Any exceptions arising from the copy constructor for the contained stream.
+
+```c++
+constexpr any_input_output_stream& operator=(any_input_output_stream&& other)
+	noexcept;
+```
+
+*Effects:* As if by `any_input_output_stream(move(other)).swap(*this)`.
+
+*Returns:* `*this`.
+
+*Postconditions:* The state of `*this` is equivalent to the original state of `other`.
+
+```c++
+template <input_output_stream S>
+constexpr any_input_output_stream& operator=(S&& s);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Constructs an object `tmp` of type `any_input_output_stream` that contains a stream of type `VS` direct-initialized with `std::forward<S>(s)`, and `tmp.swap(*this)`. No effects if an exception is thrown.
+
+*Returns:* `*this`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+#### 29.1.?.?.? Observers [any.io.stream.observers]
+
+```c++
+constexpr bool has_value() const noexcept;
+```
+
+*Returns:* `true` if `*this` contains a stream, otherwise `false`.
+
+```c++
+constexpr const type_info& type() const noexcept;
+```
+
+*Returns:* `typeid(S)` if `*this` contains a stream of type `S`, otherwise `typeid(void)`.
+
+```c++
+template <input_output_stream S>
+constexpr const S& get() const;
+template <input_output_stream S>
+constexpr S& get();
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Returns:* Reference to the contained stream.
+
+*Throws:* `bad_any_cast` if `type() != typeid(VS)`.
+
+#### 29.1.?.?.? Modifiers [any.io.stream.modifiers]
+
+```c++
+template <input_output_stream S, typename... Args>
+requires constructible_from<S, Args...>
+constexpr void emplace(Args&&... args);
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Effects:* Calls `reset()`. Then initializes the contained stream as if direct-non-list-initializing an object of type `VS` with the arguments `forward<Args>(args)...`.
+
+*Postconditions:* `*this` contains a stream of type `VS`.
+
+*Throws:* Any exception thrown by the selected constructor of `VS`.
+
+*Remarks:* If an exception is thrown during the call to `VS`’s constructor, `*this` does not contain a stream, and any previously contained stream has been destroyed.
+
+```c++
+template <input_output_stream S>
+requires movable<S>
+constexpr S release();
+```
+
+Let `VS` be `decay_t<S>`.
+
+*Postconditions:* `has_value() == false`.
+
+*Returns:* The stream of type `S` constructed from the contained stream considering that contained stream as an rvalue.
+
+*Throws:* `bad_any_cast` if `type() != typeid(VS)`.
+
+```c++
+constexpr void reset() noexcept;
+```
+
+*Effects:* If `has_value() == true`, destroys the contained stream.
+
+*Postconditions:* `has_value() == false`.
+
+```c++
+constexpr void swap(any_input_output_stream& other) noexcept;
+```
+
+*Effects:* Exchanges the states of `*this` and `other`.
+
+#### 29.1.?.?.? Position [any.io.stream.position]
+
+```c++
+constexpr streamoff get_position() const;
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Returns:* `s.get_position()`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+```c++
+constexpr void set_position(streamoff position);
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* Calls `s.set_position(position)`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+```c++
+constexpr void seek_position(base_position base, streamoff offset);
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* Calls `s.seek_position(base, offset)`.
+
+*Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
+
+#### 29.1.?.?.? Buffering [any.io.stream.buffer]
+
+```c++
+constexpr void flush();
+```
+
+Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
+
+*Effects:* If `!buffered_stream<S>`, does nothing. Otherwise, calls `s.flush()`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
+
+#### 29.1.?.?.? Reading [any.io.stream.read]
+
+```c++
+constexpr streamsize read_some(span<byte> buffer);
+```
+
+Let `s` be the contained stream of `*this`.
+
+*Returns:* `s.read_some(buffer)`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
+
+#### 29.1.?.?.? Writing [any.io.stream.write]
+
+```c++
+constexpr streamsize write_some(span<const byte> buffer);
+```
+
+Let `s` be the contained stream of `*this`.
+
+*Returns:* `s.write_some(buffer)`.
+
+*Throws:* `io_error` if `has_value() == false`. Otherwise, any exception thrown by `s`.
+
+*Error conditions:*
+
+* `bad_file_descriptor` - if `has_value() == false`.
 
 ## 29.1.? Span streams [span.streams]
 
