@@ -1163,7 +1163,7 @@ constexpr format(endian endianness = endian::native,
 	noexcept;
 ```
 
-*Ensures:* `endianness_ == endianness` and `float_format_ == float_format`.
+*Postconditions:* `endianness_ == endianness` and `float_format_ == float_format`.
 
 ### 29.1.?.? Member functions [io.format.members]
 
@@ -1177,7 +1177,7 @@ constexpr endian get_endianness() const noexcept;
 constexpr void set_endianness(endian new_endianness) noexcept;
 ```
 
-*Ensures:* `endianness_ == new_endianness`.
+*Postconditions:* `endianness_ == new_endianness`.
 
 ```c++
 constexpr floating_point_format get_floating_point_format() const noexcept;
@@ -1190,7 +1190,7 @@ constexpr void set_floating_point_format(floating_point_format new_format)
 	noexcept;
 ```
 
-*Ensures:* `float_format_ == new_format`.
+*Postconditions:* `float_format_ == new_format`.
 
 ## 29.1.? Context concepts [io.context.concepts]
 
@@ -1266,7 +1266,7 @@ constexpr default_context(S& s, format f = {}) noexcept;
 
 *Effects:* Initializes `stream_` with `s`.
 
-*Ensures:* `format_ == f`.
+*Postconditions:* `format_ == f`.
 
 ### 29.1.?.? Stream [io.default.context.stream]
 
@@ -1294,7 +1294,7 @@ constexpr format get_format() const noexcept;
 constexpr void set_format(format f) noexcept;
 ```
 
-*Ensures:* `format_ == f`.
+*Postconditions:* `format_ == f`.
 
 ## 29.1.? Customization points for serialization [io.serialization]
 
@@ -2342,7 +2342,7 @@ TODO
 constexpr input_span_stream() noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::empty(buffer_) == true`,
 * `position_ == 0`.
@@ -2351,7 +2351,7 @@ constexpr input_span_stream() noexcept;
 constexpr input_span_stream(span<const byte> buffer) noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::data(buffer_) == ranges::data(buffer)`,
 * `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
@@ -2369,7 +2369,7 @@ constexpr streamoff get_position() const noexcept;
 constexpr void set_position(streamoff position);
 ```
 
-*Ensures:* `position_ == position`.
+*Postconditions:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2426,7 +2426,7 @@ constexpr span<const byte> get_buffer() const noexcept;
 constexpr void set_buffer(span<const byte> new_buffer) noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::data(buffer_) == ranges::data(new_buffer)`,
 * `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
@@ -2467,7 +2467,7 @@ TODO
 constexpr output_span_stream() noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::empty(buffer_) == true`,
 * `position_ == 0`.
@@ -2476,7 +2476,7 @@ constexpr output_span_stream() noexcept;
 constexpr output_span_stream(span<byte> buffer) noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::data(buffer_) == ranges::data(buffer)`,
 * `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
@@ -2494,7 +2494,7 @@ constexpr streamoff get_position() const noexcept;
 constexpr void set_position(streamoff position);
 ```
 
-*Ensures:* `position_ == position`.
+*Postconditions:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2551,7 +2551,7 @@ constexpr span<byte> get_buffer() const noexcept;
 constexpr void set_buffer(span<byte> new_buffer) noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::data(buffer_) == ranges::data(new_buffer)`,
 * `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
@@ -2595,7 +2595,7 @@ TODO
 constexpr input_output_span_stream() noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::empty(buffer_) == true`,
 * `position_ == 0`.
@@ -2604,7 +2604,7 @@ constexpr input_output_span_stream() noexcept;
 constexpr input_output_span_stream(span<byte> buffer) noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::data(buffer_) == ranges::data(buffer)`,
 * `ranges::ssize(buffer_) == ranges::ssize(buffer)`,
@@ -2622,7 +2622,7 @@ constexpr streamoff get_position() const noexcept;
 constexpr void set_position(streamoff position);
 ```
 
-*Ensures:* `position_ == position`.
+*Postconditions:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2702,7 +2702,7 @@ constexpr span<byte> get_buffer() const noexcept;
 constexpr void set_buffer(span<byte> new_buffer) noexcept;
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `ranges::data(buffer_) == ranges::data(new_buffer)`,
 * `ranges::ssize(buffer_) == ranges::ssize(new_buffer)`,
@@ -2750,7 +2750,7 @@ TODO
 constexpr basic_input_memory_stream();
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `buffer_ == Container{}`,
 * `position_ == 0`.
@@ -2761,7 +2761,7 @@ constexpr basic_input_memory_stream(const Container& c);
 
 *Effects:* Initializes `buffer_` with `c`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ```c++
 constexpr basic_input_memory_stream(Container&& c);
@@ -2769,7 +2769,7 @@ constexpr basic_input_memory_stream(Container&& c);
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 #### 29.1.?.?.? Position [input.memory.stream.position]
 
@@ -2783,7 +2783,7 @@ constexpr streamoff get_position() const noexcept;
 constexpr void set_position(streamoff position);
 ```
 
-*Ensures:* `position_ == position`.
+*Postconditions:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2846,7 +2846,7 @@ constexpr Container get_buffer() && noexcept;
 constexpr void set_buffer(const Container& new_buffer);
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
@@ -2857,7 +2857,7 @@ constexpr void set_buffer(Container&& new_buffer);
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ```c++
 constexpr void reset_buffer() noexcept;
@@ -2865,7 +2865,7 @@ constexpr void reset_buffer() noexcept;
 
 *Effects:* Equivalent to `buffer_.clear()`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ### 29.1.?.2 Class template `basic_output_memory_stream` [output.memory.stream]
 
@@ -2907,7 +2907,7 @@ TODO
 constexpr basic_output_memory_stream();
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `buffer_ == Container{}`,
 * `position_ == 0`.
@@ -2918,7 +2918,7 @@ constexpr basic_output_memory_stream(const Container& c);
 
 *Effects:* Initializes `buffer_` with `c`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ```c++
 constexpr basic_output_memory_stream(Container&& c);
@@ -2926,7 +2926,7 @@ constexpr basic_output_memory_stream(Container&& c);
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 #### 29.1.?.?.? Position [output.memory.stream.position]
 
@@ -2940,7 +2940,7 @@ constexpr streamoff get_position() const noexcept;
 constexpr void set_position(streamoff position);
 ```
 
-*Ensures:* `position_ == position`.
+*Postconditions:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -3013,7 +3013,7 @@ constexpr Container get_buffer() && noexcept;
 constexpr void set_buffer(const Container& new_buffer);
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
@@ -3024,7 +3024,7 @@ constexpr void set_buffer(Container&& new_buffer);
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ```c++
 constexpr void reset_buffer() noexcept;
@@ -3032,7 +3032,7 @@ constexpr void reset_buffer() noexcept;
 
 *Effects:* Equivalent to `buffer_.clear()`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ### 29.1.?.3 Class template `basic_input_output_memory_stream` [io.memory.stream]
 
@@ -3077,7 +3077,7 @@ TODO
 constexpr basic_input_output_memory_stream();
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `buffer_ == Container{}`,
 * `position_ == 0`.
@@ -3088,7 +3088,7 @@ constexpr basic_input_output_memory_stream(const Container& c);
 
 *Effects:* Initializes `buffer_` with `c`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ```c++
 constexpr basic_input_output_memory_stream(Container&& c);
@@ -3096,7 +3096,7 @@ constexpr basic_input_output_memory_stream(Container&& c);
 
 *Effects:* Initializes `buffer_` with `move(c)`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 #### 29.1.?.?.? Position [io.memory.stream.position]
 
@@ -3110,7 +3110,7 @@ constexpr streamoff get_position();
 constexpr void set_position(streamoff position);
 ```
 
-*Ensures:* `position_ == position`.
+*Postconditions:* `position_ == position`.
 
 *Throws:* `io_error` in case of error.
 
@@ -3206,7 +3206,7 @@ constexpr Container get_buffer() && noexcept;
 constexpr void set_buffer(const Container& new_buffer);
 ```
 
-*Ensures:*
+*Postconditions:*
 
 * `buffer_ == new_buffer`.
 * `position_ == 0`.
@@ -3217,7 +3217,7 @@ constexpr void set_buffer(Container&& new_buffer);
 
 *Effects:* Move assigns `new_buffer` to `buffer_`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ```c++
 constexpr void reset_buffer() noexcept;
@@ -3225,7 +3225,7 @@ constexpr void reset_buffer() noexcept;
 
 *Effects:* Equivalent to `buffer_.clear()`.
 
-*Ensures:* `position_ == 0`.
+*Postconditions:* `position_ == 0`.
 
 ## 29.1.? File streams [file.streams???] (naming conflict)
 
