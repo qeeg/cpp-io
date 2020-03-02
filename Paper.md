@@ -138,6 +138,7 @@ Thoughts on [@CEREAL]:
   * `gcount` became the return value of `read_some`.
   * `get`, `read`, `put` and `write` member functions have been replaced with `std::io::read_raw` and `std::io::write_raw` customization points.
 * `operator>>` and `operator<<` have been replaced with `std::io::read` and `std::io::write` customization points.
+* `std::cin`, `std::cout` and `std::cerr` have been replaced with `std::io::in`, `std::io::out` and `std::io::err`.
 
 # Tutorial
 
@@ -748,7 +749,7 @@ This proposal doesn't rule out more low-level library that exposes complex detai
 * Error handling using `throws` + `std::error`.
 * `std::filesystem::path_view`
 * Remove `std::io::floating_point_format` if [@P1468R2] is accepted.
-* Binary versions of `std::cin`, `std::cout` and `std::cerr`.
+* Synchronization between standard stream objects, `<iostream>` and `<cstdio>`.
 * Vectored IO.
 * `constexpr` file streams as a generalization of `std::embed`.
 
@@ -857,6 +858,11 @@ concept writable_to = @_see below_@;
 class any_input_stream;
 class any_output_stream;
 class any_input_output_stream;
+
+// Standard stream objects
+any_input_stream& in() noexcept;
+any_output_stream& out() noexcept;
+any_output_stream& err() noexcept;
 
 // Span streams
 class input_span_stream;
@@ -2304,6 +2310,38 @@ Let `s` be the contained stream of `*this`.
 *Error conditions:*
 
 * `bad_file_descriptor` - if `has_value() == false`.
+
+## 29.1.? Standard stream objects [stream.objects]
+
+```c++
+any_input_stream& in() noexcept;
+any_output_stream& out() noexcept;
+any_output_stream& err() noexcept;
+```
+
+### 29.1.?.? Overview [stream.objects.overview]
+
+Standard stream objects defined in this clause have static storage duration and are initialized during the first call to the function that returns a reference to them. Types of default contained streams are implementation-defined. Concurrent access to default contained streams by multiple threads does not result in a data race.
+
+### 29.1.?.? Functions [stream.objects.functions]
+
+```c++
+any_input_stream& in() noexcept;
+```
+
+*Returns:* Reference to the standard stream object initialized with the standard input stream.
+
+```c++
+any_output_stream& out() noexcept;
+```
+
+*Returns:* Reference to the standard stream object initialized with the standard output stream.
+
+```c++
+any_output_stream& err() noexcept;
+```
+
+*Returns:* Reference to the standard stream object initialized with the standard error stream.
 
 ## 29.1.? Span streams [span.streams]
 
