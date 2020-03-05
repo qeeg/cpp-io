@@ -1,7 +1,7 @@
 ---
 title: Modern std::byte stream IO for C++
 document: DXXXXR0
-date: 2020-02-26
+date: 2020-03-05
 audience: LEWGI
 author:
   - name: Lyberta
@@ -726,7 +726,7 @@ Software:
 | std::ifstream              | 150.945   |
 | std::io::input_file_stream | 82.5931   |
 
-`std::io::input_file_stream` is ~30% faster than `std::FILE` and ~45% faster then `std::ifstream`.
+`std::io::input_file_stream` is ~30% faster than `std::FILE` and ~45% faster than `std::ifstream`.
 
 ### Writing 10 million of random `std::size_t` values to file sequentially
 
