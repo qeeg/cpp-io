@@ -11,5 +11,5 @@ The reference implementation is [here](https://github.com/Lyberta/cpp-io-impl).
 ## How to generate PDF yourself
 
 ```
-make Paper.md
+make Paper.pdf
 ```
