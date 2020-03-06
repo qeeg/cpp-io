@@ -73,7 +73,7 @@ The following problems were encountered:
 * There is no easy way to convert integers from native endianness to specific endianness and vice versa. There is an `std::byteswap` proposal ([@P1272R2]) but it doesn't solve the general case because C++ allows systems that are neither big- nor little-endian.
 * There is no easy way to convert floating point number from native represenation to ISO/IEC 60559 and vice versa. This makes makes portable serialization of floating point numbers very hard on non-IEC platforms. [@P1468R2] should fix this.
 
-While the author thinks that having endianness and floating point convertion functions available publicly is a good idea, they leave them as implementation details in this paper.
+While the author thinks that having endianness and floating point conversion functions available publicly is a good idea, they leave them as implementation details in this paper.
 
 Thoughts on [@BOOST.SERIALIZATION]:
 
@@ -131,7 +131,7 @@ Thoughts on [@CEREAL]:
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::base_position`.
 * `getline`, `ignore`, `peek`, `putback` and `unget` member functions were removed because they don't make sense during binary IO and require unnecessary overhead.
-* `sync` and `flush` were merged into a single `flush` member function that either discards the input buffer of flushes the output buffer. These member functions are optional because buffering is not always useful.
+* `sync` and `flush` were merged into a single `flush` member function that either discards the input buffer or flushes the output buffer. These member functions are optional because buffering is not always useful.
 * Since it is not always possible to read or write all requested bytes in one system call (especially during networking), the interface has been changed accordingly:
   * `std::io::input_stream` requires `read_some` member function that reads zero or more bytes from the stream and returns amount of bytes read.
   * `std::io::output_stream` requires `write_some` member function that writes one or more bytes to the stream and returns amount of bytes written.
