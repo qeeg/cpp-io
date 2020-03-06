@@ -742,7 +742,7 @@ Software:
 
 It is hopeful that `std::io::format` will be used to handle Unicode encoding schemes during file and network IO so Unicode layer will only need to handle encoding forms.
 
-This proposal doesn't rule out more low-level library that exposes complex details of modern operating systems. However, the design of this library has been intentionally kept as simple as possible to be novice-friendly.
+This proposal is designed to work with [@P1031R2] so users have a choice of going "under the hood" with [@P1031R2] or staying more high level with streams.
 
 # Open issues
 
