@@ -125,8 +125,7 @@ Thoughts on [@CEREAL]:
 * `std::ios_base::openmode` has been split into `std::io::mode` and `std::io::creation` that are modeled after the ones from [@P1031R2].
 * Since operating systems only expose a single file position that is used both for reading and writing, the interface has been changed accordingly:
   * `tellg` and `tellp` -> `get_position`.
-  * Single argument versions of `seekg` and `seekp` -> `set_position`.
-  * Double argument versions of `seekg` and `seekp` -> `seek_position`.
+  * `seekg` and `seekp` -> `seek_position`.
 * `std::basic_ios::pos_type` has been replaced with `std::streamoff`.
 * `std::basic_ios::off_type` has been replaced with `std::streamoff`.
 * `std::ios_base::seekdir` has been replaced with `std::io::base_position`.
@@ -694,15 +693,15 @@ The reference implementation is here: [@IMPL]
 
 Most of the proposal can be implemented in ISO C++. Endianness conversion of integers can be written in ISO C++ by using arithmetic shifts. Conversion of floating point numbers requires knowledge of their implementation-defined format. File IO requires calling operating system API. The following table provides some examples:
 
-| Function        | POSIX   | Windows            | UEFI                            |
-| --------------- | ------- | ------------------ | ------------------------------- |
-| Constructor     | `open`  | `CreateFile`       | `EFI_FILE_PROTOCOL.Open`        |
-| Destructor      | `close` | `CloseHandle`      | `EFI_FILE_PROTOCOL.Close`       |
-| `get_position`  | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.GetPosition` |
-| `set_position`  | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.SetPosition` |
-| `seek_position` | `lseek` | `SetFilePointerEx` | No 1:1 mapping                  |
-| `read_some`     | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
-| `write_some`    | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
+| Function                 | POSIX   | Windows            | UEFI                            |
+| ------------------------ | ------- | ------------------ | ------------------------------- |
+| Constructor              | `open`  | `CreateFile`       | `EFI_FILE_PROTOCOL.Open`        |
+| Destructor               | `close` | `CloseHandle`      | `EFI_FILE_PROTOCOL.Close`       |
+| `get_position`           | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.GetPosition` |
+| absolute `seek_position` | `lseek` | `SetFilePointerEx` | `EFI_FILE_PROTOCOL.SetPosition` |
+| relative`seek_position`  | `lseek` | `SetFilePointerEx` | No 1:1 mapping                  |
+| `read_some`              | `read`  | `ReadFile`         | `EFI_FILE_PROTOCOL.Read`        |
+| `write_some`             | `write` | `WriteFile`        | `EFI_FILE_PROTOCOL.Write`       |
 
 ## Benchmarks
 
@@ -1029,7 +1028,7 @@ concept seekable_stream = stream<T> && requires(const T s)
 		{s.get_position()} -> same_as<streamoff>;
 	} && requires(T s, streamoff position, base_position base)
 	{
-		s.set_position(position);
+		s.seek_position(position);
 		s.seek_position(base);
 		s.seek_position(base, position);
 	};
@@ -1046,7 +1045,7 @@ streamoff get_position();
 *Returns:* Current position of the stream.
 
 ```c++
-void set_position(streamoff position);
+void seek_position(streamoff position);
 ```
 
 *Effects:* Sets the position of the stream to the given value.
@@ -1437,8 +1436,8 @@ public:
 	
 	// Position
 	constexpr streamoff get_position() const;
-	constexpr void set_position(streamoff position);
-	constexpr void seek_position(base_position base, streamoff offset);
+	constexpr void seek_position(streamoff position);
+	constexpr void seek_position(base_position base, streamoff offset = 0);
 	
 	// Buffering
 	constexpr void flush();
@@ -1634,12 +1633,12 @@ Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 * `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 
-*Effects:* Calls `s.set_position(position)`.
+*Effects:* Calls `s.seek_position(position)`.
 
 *Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
 
@@ -1648,7 +1647,7 @@ Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 * `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
 
 ```c++
-constexpr void seek_position(base_position base, streamoff offset);
+constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
 Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
@@ -1736,8 +1735,8 @@ public:
 	
 	// Position
 	constexpr streamoff get_position() const;
-	constexpr void set_position(streamoff position);
-	constexpr void seek_position(base_position base, streamoff offset);
+	constexpr void seek_position(streamoff position);
+	constexpr void seek_position(base_position base, streamoff offset = 0);
 	
 	// Buffering
 	constexpr void flush();
@@ -1931,12 +1930,12 @@ Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 * `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 
-*Effects:* Calls `s.set_position(position)`.
+*Effects:* Calls `s.seek_position(position)`.
 
 *Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
 
@@ -1945,7 +1944,7 @@ Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 * `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
 
 ```c++
-constexpr void seek_position(base_position base, streamoff offset);
+constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
 Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
@@ -2036,8 +2035,8 @@ public:
 	
 	// Position
 	constexpr streamoff get_position() const;
-	constexpr void set_position(streamoff position);
-	constexpr void seek_position(base_position base, streamoff offset);
+	constexpr void seek_position(streamoff position);
+	constexpr void seek_position(base_position base, streamoff offset = 0);
 	
 	// Buffering
 	constexpr void flush();
@@ -2236,12 +2235,12 @@ Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 * `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 
-*Effects:* Calls `s.set_position(position)`.
+*Effects:* Calls `s.seek_position(position)`.
 
 *Throws:* `io_error` if `has_value() == false` or `!seekable_stream<S>`. Otherwise, any exception thrown by `s`.
 
@@ -2250,7 +2249,7 @@ Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
 * `bad_file_descriptor` - if `has_value() == false` or `!seekable_stream<S>`.
 
 ```c++
-constexpr void seek_position(base_position base, streamoff offset);
+constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
 Let `s` be the contained stream of `*this` and `S` be `decltype(s)`.
@@ -2357,7 +2356,7 @@ public:
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
-	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff position);
 	constexpr void seek_position(base_position base, streamoff offset = 0);
 
 	// Reading
@@ -2404,7 +2403,7 @@ constexpr streamoff get_position() const noexcept;
 *Returns:* `position_`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 *Postconditions:* `position_ == position`.
@@ -2420,7 +2419,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
+*Effects:* If `base == base_position::beginning`, calls `seek_position(offset)`. If `base == base_position::current`, calls `seek_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `seek_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2482,7 +2481,7 @@ public:
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
-	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff position);
 	constexpr void seek_position(base_position base, streamoff offset = 0);
 
 	// Writing
@@ -2529,7 +2528,7 @@ constexpr streamoff get_position() const noexcept;
 *Returns:* `position_`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 *Postconditions:* `position_ == position`.
@@ -2545,7 +2544,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
+*Effects:* If `base == base_position::beginning`, calls `seek_position(offset)`. If `base == base_position::current`, calls `seek_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `seek_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2607,7 +2606,7 @@ public:
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
-	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff position);
 	constexpr void seek_position(base_position base, streamoff offset = 0);
 
 	// Reading
@@ -2657,7 +2656,7 @@ constexpr streamoff get_position() const noexcept;
 *Returns:* `position_`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 *Postconditions:* `position_ == position`.
@@ -2673,7 +2672,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
+*Effects:* If `base == base_position::beginning`, calls `seek_position(offset)`. If `base == base_position::current`, calls `seek_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `seek_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2762,7 +2761,7 @@ public:
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
-	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff position);
 	constexpr void seek_position(base_position base, streamoff offset = 0);
 
 	// Reading
@@ -2818,7 +2817,7 @@ constexpr streamoff get_position() const noexcept;
 *Returns:* `position_`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 *Postconditions:* `position_ == position`.
@@ -2834,7 +2833,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
+*Effects:* If `base == base_position::beginning`, calls `seek_position(offset)`. If `base == base_position::current`, calls `seek_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `seek_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -2919,7 +2918,7 @@ public:
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
-	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff position);
 	constexpr void seek_position(base_position base, streamoff offset = 0);
 
 	// Writing
@@ -2975,7 +2974,7 @@ constexpr streamoff get_position() const noexcept;
 *Returns:* `position_`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 *Postconditions:* `position_ == position`.
@@ -2991,7 +2990,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
+*Effects:* If `base == base_position::beginning`, calls `seek_position(offset)`. If `base == base_position::current`, calls `seek_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `seek_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -3086,7 +3085,7 @@ public:
 
 	// Position
 	constexpr streamoff get_position() const noexcept;
-	constexpr void set_position(streamoff position);
+	constexpr void seek_position(streamoff position);
 	constexpr void seek_position(base_position base, streamoff offset = 0);
 
 	// Reading
@@ -3145,7 +3144,7 @@ constexpr streamoff get_position();
 *Returns:* `position_`.
 
 ```c++
-constexpr void set_position(streamoff position);
+constexpr void seek_position(streamoff position);
 ```
 
 *Postconditions:* `position_ == position`.
@@ -3161,7 +3160,7 @@ constexpr void set_position(streamoff position);
 constexpr void seek_position(base_position base, streamoff offset = 0);
 ```
 
-*Effects:* If `base == base_position::beginning`, calls `set_position(offset)`. If `base == base_position::current`, calls `set_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `set_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
+*Effects:* If `base == base_position::beginning`, calls `seek_position(offset)`. If `base == base_position::current`, calls `seek_position(@_move_position_@(position_, offset))`. If `base == base_position::end`, calls `seek_position(@_move_position_@(ranges::ssize(buffer_), offset))`.
 
 *Throws:* `io_error` in case of error.
 
@@ -3282,7 +3281,7 @@ public:
 	
 	// Position
 	streamoff get_position() const;
-	void set_position(streamoff position);
+	void seek_position(streamoff position);
 	void seek_position(base_position base, streamoff offset = 0);
 	
 	// Buffering
@@ -3343,7 +3342,7 @@ streamoff get_position() const;
 *Throws:* TODO
 
 ```c++
-void set_position(streamoff position);
+void seek_position(streamoff position);
 ```
 
 *Effects:* Calls `flush()` and then sets the position of the stream to the given value.
