@@ -1,7 +1,7 @@
 ---
 title: Modern std::byte stream IO for C++
-document: D2146R0
-date: 2020-03-18
+document: P2146R0
+date: 2020-03-19
 audience: LEWGI
 author:
   - name: Amanda Kornoushenko
