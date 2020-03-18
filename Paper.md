@@ -1,11 +1,11 @@
 ---
 title: Modern std::byte stream IO for C++
 document: D2146R0
-date: 2020-03-05
+date: 2020-03-18
 audience: LEWGI
 author:
-  - name: Lyberta
-    email: <lyberta@lyberta.net>
+  - name: Amanda Kornoushenko
+    email: <amanda@korno.net>
 ---
 
 # Abstract
